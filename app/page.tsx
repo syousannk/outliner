@@ -311,12 +311,13 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     : 'opacity-30 sm:opacity-0 transition-opacity duration-150';
 
   return (
-    <div
-      className="flex flex-col relative"
-      onMouseEnter={(e) => { e.stopPropagation(); setSelfHovered(true); }}
-      onMouseLeave={(e) => { e.stopPropagation(); setSelfHovered(false); }}
-    >
-      <div className={`flex items-center ${pyClass}`}>
+    <div className="flex flex-col relative">
+      {/* 行部分のみにホバーを適用（子ノードのdivと分離することで伝播を防ぐ） */}
+      <div
+        className={`flex items-center ${pyClass}`}
+        onMouseEnter={() => setSelfHovered(true)}
+        onMouseLeave={() => setSelfHovered(false)}
+      >
 
         {/* 折りたたみアイコン */}
         <div className="w-5 h-5 flex flex-shrink-0 items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded cursor-pointer transition-colors"
@@ -327,8 +328,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         </div>
 
         {/* 完了トグル ＋ バレット
-            完了済み → CheckCircle（グレー）
-            未完了   → Circle（小丸のみ、ホバーでCheckCircleは出さない） */}
+            完了済み → CheckCircle（グレー塗り）
+            未完了   → Circle（枠線のみ、背景なし） */}
         <button
           onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
           className="relative flex-shrink-0 w-5 h-5 mx-1 flex items-center justify-center transition-colors"
@@ -337,7 +338,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
           {node.isCompleted ? (
             <CheckCircle size={16} className="text-gray-400" />
           ) : (
-            <Circle size={16} className="fill-gray-300 text-gray-300" />
+            <Circle size={16} className="text-gray-400" />
           )}
         </button>
 
