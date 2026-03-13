@@ -1,25 +1,24 @@
 'use client';
 
-import React, { useState, useReducer, useEffect, useRef, useMemo } from 'react';
-import { ChevronRight, ChevronDown, Circle, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useReducer, useEffect, useRef, useMemo, useCallback } from 'react';
+import { ChevronRight, ChevronDown, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, Type } from 'lucide-react';
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  User,
-  updateProfile,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
+  onAuthStateChanged, User, updateProfile,
 } from 'firebase/auth';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db, APP_ID } from '@/lib/firebase';
 
 const generateId = () => crypto.randomUUID();
 
+// --- 型定義 ---
 interface OutlineNode {
   id: string; text: string; startDate: string; endDate: string;
   isCollapsed: boolean; isCompleted: boolean; children: string[]; parent: string;
 }
 interface NodesMap { [key: string]: OutlineNode | { id: string; children: string[]; parent: null }; }
+type FontSize = 'sm' | 'md' | 'lg';
+interface ToastItem { id: string; nodeId: string; nodeText: string; snapshot: NodesMap; timer: ReturnType<typeof setTimeout>; remaining: number; startTime: number; }
 
 const createNode = (overrides: Partial<OutlineNode> = {}): OutlineNode => ({
   id: generateId(), text: '', startDate: '', endDate: '',
@@ -46,7 +45,8 @@ type Action =
   | { type: 'INDENT'; id: string } | { type: 'UNINDENT'; id: string }
   | { type: 'DELETE'; id: string } | { type: 'MOVE_UP'; id: string } | { type: 'MOVE_DOWN'; id: string }
   | { type: 'SET_FOCUS'; id: string } | { type: 'TOGGLE_COMPLETE'; id: string }
-  | { type: 'SET_NODES'; nodes: NodesMap };
+  | { type: 'SET_NODES'; nodes: NodesMap }
+  | { type: 'RESTORE_NODES'; nodes: NodesMap };
 
 function reducer(state: State, action: Action): State {
   const nodes: NodesMap = { ...state.nodes };
@@ -108,6 +108,7 @@ function reducer(state: State, action: Action): State {
     case 'SET_FOCUS': return { ...state, focusId: action.id };
     case 'TOGGLE_COMPLETE': { clone(action.id).isCompleted = !(nodes[action.id] as OutlineNode).isCompleted; return { ...state, nodes }; }
     case 'SET_NODES': return { ...state, nodes: action.nodes };
+    case 'RESTORE_NODES': return { ...state, nodes: action.nodes };
     default: return state;
   }
 }
@@ -229,27 +230,32 @@ function AuthScreen() {
   );
 }
 
-// --- ツリーコンポーネント ---
-const Bullet = ({ hasChildren, isCollapsed, onToggle }: { hasChildren: boolean; isCollapsed: boolean; onToggle: () => void }) => (
-  <div className="w-6 h-6 flex flex-shrink-0 items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded cursor-pointer transition-colors" onClick={onToggle}>
-    {hasChildren ? (isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />) : <Circle size={8} className="fill-current" />}
-  </div>
-);
-
-const DateInput = ({ value, min, onChange, placeholder }: { value: string; min?: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; placeholder: string }) => (
-  <input type="date" value={value} min={min} onChange={onChange}
+// --- 日付入力 ---
+const DateInput = ({ value, min, onChange, placeholder, onClick }: {
+  value: string; min?: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder: string; onClick?: () => void;
+}) => (
+  <input type="date" value={value} min={min} onChange={onChange} onClick={onClick}
     className={`bg-transparent outline-none cursor-pointer w-[115px] text-xs sm:text-sm rounded px-1.5 py-1 hover:bg-gray-200 focus:ring-1 focus:ring-blue-400 transition-colors ${!value ? 'text-gray-400 opacity-60' : 'text-gray-700'}`}
     title={placeholder} />
 );
 
+// --- ツリーアイテム ---
 interface TreeItemProps {
   id: string; nodes: NodesMap; dispatch: React.Dispatch<Action>;
   focusId: string | null; matched: Set<string>; isFiltering: boolean; searchQuery: string;
+  fontSize: FontSize; onDeleteRequest: (id: string, snapshot: NodesMap) => void;
 }
 
-const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFiltering, searchQuery }: TreeItemProps) => {
+const fontSizeClasses: Record<FontSize, string> = { sm: 'text-sm', md: 'text-[15px] sm:text-base', lg: 'text-lg sm:text-xl' };
+
+const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFiltering, searchQuery, fontSize, onDeleteRequest }: TreeItemProps) => {
   const node = nodes[id] as OutlineNode;
   const inputRef = useRef<HTMLInputElement>(null);
+  const startDateRef = useRef<HTMLInputElement>(null);
+  const endDateRef = useRef<HTMLInputElement>(null);
+  const [calendarVisible, setCalendarVisible] = useState(false);
 
   useEffect(() => {
     if (focusId === id && inputRef.current) {
@@ -262,7 +268,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const hasChildren = node.children.length > 0;
   const isExpanded = isFiltering ? true : !node.isCollapsed;
   const isHighlighted = searchQuery && node.text.toLowerCase().includes(searchQuery.toLowerCase());
-  const showCalendar = !!(node.startDate || node.endDate) || focusId === id;
+  const hasDates = !!(node.startDate || node.endDate);
+  const showCalendar = hasDates || calendarVisible || focusId === id;
+  const textClass = fontSizeClasses[fontSize];
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.nativeEvent.isComposing) return;
@@ -273,40 +281,76 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     else if (e.key === 'ArrowDown') { e.preventDefault(); dispatch({ type: 'MOVE_DOWN', id }); }
   };
 
+  const handleDeleteClick = () => {
+    const snapshot = JSON.parse(JSON.stringify(nodes)) as NodesMap;
+    dispatch({ type: 'DELETE', id });
+    onDeleteRequest(id, snapshot);
+  };
+
+  const handleCalendarIconClick = () => {
+    setCalendarVisible(true);
+    setTimeout(() => startDateRef.current?.showPicker?.(), 50);
+  };
+
+  const handleDateClick = () => {
+    setCalendarVisible(true);
+  };
+
   return (
     <div className="flex flex-col relative group/node">
       <div className="flex items-center py-1">
-        <div className="flex-shrink-0"><Bullet hasChildren={hasChildren} isCollapsed={node.isCollapsed} onToggle={() => dispatch({ type: 'TOGGLE_COLLAPSE', id })} /></div>
+        {/* 折りたたみ */}
+        <div className="w-6 h-6 flex flex-shrink-0 items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded cursor-pointer transition-colors"
+          onClick={() => dispatch({ type: 'TOGGLE_COLLAPSE', id })}>
+          {hasChildren ? (node.isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />) : null}
+        </div>
+        {/* 完了トグル */}
         <button onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
           className={`flex-shrink-0 mx-1 flex items-center justify-center transition-colors ${node.isCompleted ? 'text-gray-400' : 'text-gray-300 hover:text-gray-400'}`}>
-          {node.isCompleted ? <CheckCircle size={18} /> : <Circle size={18} />}
+          <CheckCircle size={18} className={node.isCompleted ? 'opacity-100' : 'opacity-0 group-hover/node:opacity-100 transition-opacity'} />
         </button>
+        {/* メインコンテンツ */}
         <div className={`flex-1 flex flex-row items-center ml-1 overflow-hidden transition-all duration-300 ${node.isCompleted ? 'opacity-40 grayscale' : 'opacity-100'}`}>
           <div className="relative flex-shrink overflow-hidden min-w-[20px]">
-            <span className="invisible whitespace-pre block px-1 py-1 text-[15px] sm:text-base pointer-events-none">{node.text || 'タスクを入力'}</span>
+            <span className={`invisible whitespace-pre block px-1 py-1 ${textClass} pointer-events-none`}>{node.text || 'タスクを入力'}</span>
             <input ref={inputRef} value={node.text} onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
-              onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
+              onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); setCalendarVisible(true); }}
+              onBlur={() => { if (!hasDates) setCalendarVisible(false); }}
               onKeyDown={handleKeyDown} placeholder="タスクを入力"
-              className={`absolute inset-0 w-full h-full bg-transparent outline-none py-1 text-[15px] sm:text-base transition-colors duration-300 ${isHighlighted ? 'bg-yellow-200/50 rounded px-1' : 'px-1'} ${node.isCompleted ? 'text-gray-500' : 'text-gray-900'}`} />
-            <div className={`absolute top-1/2 left-1 -translate-y-1/2 h-[1.5px] bg-gray-500 transition-all duration-300 ease-out pointer-events-none ${node.isCompleted ? 'w-[calc(100%-8px)]' : 'w-0'}`} />
+              className={`absolute inset-0 w-full h-full bg-transparent outline-none py-1 ${textClass} transition-colors duration-300 ${isHighlighted ? 'bg-yellow-200/50 rounded px-1' : 'px-1'} ${node.isCompleted ? 'text-gray-500 line-through' : 'text-gray-900'}`} />
           </div>
+          {/* リーダー線 */}
           <div className="flex-1 border-t-[0.5px] border-solid border-gray-300 mx-2 min-w-[16px]" />
-          <div className={`flex-shrink-0 flex items-center space-x-1 sm:space-x-2 text-sm transition-opacity duration-200 ${showCalendar ? 'opacity-100' : 'opacity-0 focus-within:opacity-100'}`}>
+          {/* カレンダー */}
+          <div className={`flex-shrink-0 flex items-center space-x-1 sm:space-x-2 text-sm transition-opacity duration-200 ${showCalendar ? 'opacity-100' : 'opacity-0'}`}>
             <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-blue-400 focus-within:bg-white transition-all overflow-hidden">
-              <Calendar className="w-3.5 h-3.5 text-gray-400 ml-2" />
-              <DateInput value={node.startDate} onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })} placeholder="開始日" />
+              <Calendar className="w-3.5 h-3.5 text-gray-400 ml-2 cursor-pointer" onClick={handleCalendarIconClick} />
+              <input ref={startDateRef} type="date" value={node.startDate} onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
+                onClick={handleDateClick}
+                className={`bg-transparent outline-none cursor-pointer w-[115px] text-xs sm:text-sm rounded px-1.5 py-1 hover:bg-gray-200 focus:ring-1 focus:ring-blue-400 transition-colors ${!node.startDate ? 'text-gray-400 opacity-60' : 'text-gray-700'}`}
+                title="開始日" />
             </div>
             <span className="text-gray-300">-</span>
             <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-blue-400 focus-within:bg-white transition-all overflow-hidden">
-              <DateInput min={node.startDate} value={node.endDate} onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })} placeholder="終了日" />
+              <input ref={endDateRef} type="date" value={node.endDate} min={node.startDate} onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
+                onClick={handleDateClick}
+                className={`bg-transparent outline-none cursor-pointer w-[115px] text-xs sm:text-sm rounded px-1.5 py-1 hover:bg-gray-200 focus:ring-1 focus:ring-blue-400 transition-colors ${!node.endDate ? 'text-gray-400 opacity-60' : 'text-gray-700'}`}
+                title="終了日" />
             </div>
           </div>
+          {/* ゴミ箱ボタン */}
+          <button onClick={handleDeleteClick} title="削除"
+            className="flex-shrink-0 ml-2 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors opacity-0 group-hover/node:opacity-100">
+            <Trash2 size={14} />
+          </button>
         </div>
       </div>
       {isExpanded && hasChildren && (
         <div className="relative ml-[11px] pl-4 border-l-[0.5px] border-gray-300">
           {node.children.map((childId: string) => (
-            <TreeItem key={childId} id={childId} nodes={nodes} dispatch={dispatch} focusId={focusId} matched={matched} isFiltering={isFiltering} searchQuery={searchQuery} />
+            <TreeItem key={childId} id={childId} nodes={nodes} dispatch={dispatch} focusId={focusId}
+              matched={matched} isFiltering={isFiltering} searchQuery={searchQuery}
+              fontSize={fontSize} onDeleteRequest={onDeleteRequest} />
           ))}
         </div>
       )}
@@ -315,6 +359,46 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
 });
 TreeItem.displayName = 'TreeItem';
 
+// --- トースト ---
+function UndoToast({ toasts, onUndo, onDismiss }: {
+  toasts: ToastItem[];
+  onUndo: (toast: ToastItem) => void;
+  onDismiss: (id: string) => void;
+}) {
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => forceUpdate(n => n + 1), 100);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (toasts.length === 0) return null;
+
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center">
+      {toasts.map(toast => {
+        const elapsed = Date.now() - toast.startTime;
+        const remaining = Math.max(0, 8000 - elapsed);
+        const progress = remaining / 8000;
+        return (
+          <div key={toast.id} className="flex items-center gap-3 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-lg min-w-[300px]">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm truncate">「{toast.nodeText || '(空のタスク)'}」を削除しました</p>
+              <div className="mt-1.5 h-1 bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-400 rounded-full transition-none" style={{ width: `${progress * 100}%` }} />
+              </div>
+            </div>
+            <button onClick={() => onUndo(toast)}
+              className="flex-shrink-0 flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
+              <RotateCcw size={14} /> 元に戻す
+            </button>
+            <button onClick={() => onDismiss(toast.id)} className="flex-shrink-0 text-gray-400 hover:text-white transition-colors text-lg leading-none">×</button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // --- アウトライナー本体 ---
 function OutlinerApp({ user }: { user: User }) {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -322,6 +406,8 @@ function OutlinerApp({ user }: { user: User }) {
   const [filterMode, setFilterMode] = useState('ALL');
   const [title, setTitle] = useState("My Outline");
   const [isLoaded, setIsLoaded] = useState(false);
+  const [fontSize, setFontSize] = useState<FontSize>('md');
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
   const prevDataRef = useRef({ nodes: initialState.nodes, title: "My Outline" });
 
   useEffect(() => {
@@ -346,36 +432,81 @@ function OutlinerApp({ user }: { user: User }) {
     }
   }, [state.nodes, title, user, isLoaded]);
 
+  const handleDeleteRequest = useCallback((nodeId: string, snapshot: NodesMap) => {
+    const node = snapshot[nodeId] as OutlineNode;
+    const toastId = generateId();
+    const timer = setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== toastId));
+    }, 8000);
+    setToasts(prev => [...prev, {
+      id: toastId, nodeId, nodeText: node?.text || '', snapshot,
+      timer, remaining: 8000, startTime: Date.now(),
+    }]);
+  }, []);
+
+  const handleUndo = useCallback((toast: ToastItem) => {
+    clearTimeout(toast.timer);
+    dispatch({ type: 'RESTORE_NODES', nodes: toast.snapshot });
+    setToasts(prev => prev.filter(t => t.id !== toast.id));
+  }, []);
+
+  const handleDismiss = useCallback((toastId: string) => {
+    const toast = toasts.find(t => t.id === toastId);
+    if (toast) clearTimeout(toast.timer);
+    setToasts(prev => prev.filter(t => t.id !== toastId));
+  }, [toasts]);
+
   const { isFiltering, matched } = useFilteredNodes(state.nodes, searchQuery, filterMode);
 
   if (!isLoaded) return <div className="min-h-screen flex items-center justify-center bg-white text-gray-400"><Loader2 className="w-8 h-8 animate-spin" /></div>;
 
+  const fontSizeLabels: Record<FontSize, string> = { sm: 'S', md: 'M', lg: 'L' };
+  const fontSizeOrder: FontSize[] = ['sm', 'md', 'lg'];
+
   return (
     <div className="min-h-screen bg-white text-gray-800 font-sans flex flex-col">
-      <header className="sticky top-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 p-4 shadow-sm">
-        <div className="w-full max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex-1 w-full max-w-2xl flex items-center bg-gray-100 rounded-lg px-4 py-2 focus-within:ring-2 focus-within:ring-blue-400 transition-shadow">
-            <Search className="w-5 h-5 text-gray-500 mr-2" />
-            <input type="text" placeholder="タスクを検索..." className="w-full bg-transparent outline-none text-[15px] sm:text-base placeholder-gray-400" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+      <header className="sticky top-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 p-3 shadow-sm">
+        <div className="w-full max-w-5xl mx-auto flex items-center gap-2 flex-wrap">
+          {/* 検索バー（幅を抑える） */}
+          <div className="w-48 sm:w-56 flex items-center bg-gray-100 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-blue-400 transition-shadow">
+            <Search className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
+            <input type="text" placeholder="検索..." className="w-full bg-transparent outline-none text-sm placeholder-gray-400" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center bg-gray-100 p-1 rounded-lg">
-              {(['ALL', 'ACTIVE', 'COMPLETED'] as const).map((m) => (
-                <button key={m} onClick={() => setFilterMode(m)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${filterMode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                  {m === 'ALL' ? 'すべて' : m === 'ACTIVE' ? '未完了' : '完了済み'}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-              <span className="text-sm text-gray-500 hidden sm:block truncate max-w-[150px]">{user.displayName || user.email}</span>
-              <button onClick={() => signOut(auth)} title="ログアウト" className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                <LogOut className="w-4 h-4" />
+
+          {/* フィルター */}
+          <div className="flex items-center bg-gray-100 p-1 rounded-lg">
+            {(['ALL', 'ACTIVE', 'COMPLETED'] as const).map((m) => (
+              <button key={m} onClick={() => setFilterMode(m)}
+                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${filterMode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {m === 'ALL' ? 'すべて' : m === 'ACTIVE' ? '未完了' : '完了済み'}
               </button>
-            </div>
+            ))}
+          </div>
+
+          {/* 文字サイズ */}
+          <div className="flex items-center bg-gray-100 p-1 rounded-lg gap-0.5" title="文字サイズ">
+            <Type className="w-3.5 h-3.5 text-gray-400 mx-1" />
+            {fontSizeOrder.map((s) => (
+              <button key={s} onClick={() => setFontSize(s)}
+                className={`w-7 h-7 text-xs font-medium rounded-md transition-all ${fontSize === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {fontSizeLabels[s]}
+              </button>
+            ))}
+          </div>
+
+          {/* スペーサー */}
+          <div className="flex-1" />
+
+          {/* ユーザー情報 */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 hidden sm:block max-w-[200px] truncate" title={user.email || ''}>{user.displayName || user.email}</span>
+            <button onClick={() => signOut(auth)} title="ログアウト" className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </header>
+
       <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-8 pb-24 overflow-x-auto">
         <div className="min-w-[700px] pr-4">
           <div className="mb-8 px-2">
@@ -385,7 +516,9 @@ function OutlinerApp({ user }: { user: User }) {
           </div>
           <div className="tree-root space-y-0.5">
             {(state.nodes['root'] as OutlineNode).children.map((id: string) => (
-              <TreeItem key={id} id={id} nodes={state.nodes} dispatch={dispatch} focusId={state.focusId} matched={matched} isFiltering={isFiltering} searchQuery={searchQuery} />
+              <TreeItem key={id} id={id} nodes={state.nodes} dispatch={dispatch} focusId={state.focusId}
+                matched={matched} isFiltering={isFiltering} searchQuery={searchQuery}
+                fontSize={fontSize} onDeleteRequest={handleDeleteRequest} />
             ))}
           </div>
           {!isFiltering && (state.nodes['root'] as OutlineNode).children.length === 0 && (
@@ -395,6 +528,8 @@ function OutlinerApp({ user }: { user: User }) {
           )}
         </div>
       </main>
+
+      <UndoToast toasts={toasts} onUndo={handleUndo} onDismiss={handleDismiss} />
     </div>
   );
 }
