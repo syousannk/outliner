@@ -248,8 +248,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const node = nodes[id] as OutlineNode;
   const inputRef = useRef<HTMLInputElement>(null);
   const startDateRef = useRef<HTMLInputElement>(null);
-  // ホバー状態（デスクトップでカレンダー表示に使う）
-  const [isHovered, setIsHovered] = useState(false);
+  const endDateRef = useRef<HTMLInputElement>(null);
+  // このノード自身のホバー状態（子への伝播を防ぐためstateで管理）
+  const [selfHovered, setSelfHovered] = useState(false);
 
   useEffect(() => {
     if (focusId === id && inputRef.current) {
@@ -271,11 +272,6 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const hasDates = !!(node.startDate || node.endDate);
   const isFocused = focusId === id;
 
-  // カレンダー表示ロジック:
-  // - 日付が設定済み → 常に表示
-  // - フォーカス中 → 表示
-  // - デスクトップ: ホバー時に表示 (sm:group-hover/node:opacity-100)
-  // - スマホ: 常に薄く表示 (opacity-30)
   const { text: textClass, leading: leadingClass, py: pyClass } = fontConfig[fontSize];
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -293,26 +289,36 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     onDeleteRequest(id, snapshot);
   };
 
+  // カレンダーアイコンクリック → 開始日ピッカーを開く
   const handleCalendarIconClick = () => {
     setTimeout(() => startDateRef.current?.showPicker?.(), 50);
   };
 
-  // カレンダーの表示クラス:
-  // hasDates or isFocused → 完全表示
-  // それ以外: スマホ=opacity-30(薄く常時表示), デスクトップ=opacity-0でhover時に表示
-  const calendarVisibilityClass = hasDates || isFocused
+  // 日付入力クリック → ピッカーを開く
+  const handleStartDateClick = () => {
+    setTimeout(() => startDateRef.current?.showPicker?.(), 50);
+  };
+  const handleEndDateClick = () => {
+    setTimeout(() => endDateRef.current?.showPicker?.(), 50);
+  };
+
+  // カレンダー表示クラス（selfHoveredで判定 → 子ノードに伝播しない）:
+  // hasDates or isFocused → 常時表示
+  // selfHovered（デスクトップ） → 表示
+  // それ以外: スマホ=opacity-30常時表示, デスクトップ=非表示
+  const calendarVisibilityClass = hasDates || isFocused || selfHovered
     ? 'opacity-100'
-    : 'opacity-30 sm:opacity-0 sm:group-hover/node:opacity-100 transition-opacity duration-150';
+    : 'opacity-30 sm:opacity-0 transition-opacity duration-150';
 
   return (
     <div
-      className="flex flex-col relative group/node"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className="flex flex-col relative"
+      onMouseEnter={() => setSelfHovered(true)}
+      onMouseLeave={() => setSelfHovered(false)}
     >
       <div className={`flex items-center ${pyClass}`}>
 
-        {/* 折りたたみアイコン（子あり時のみ）― 子なしは同サイズのスペーサー */}
+        {/* 折りたたみアイコン */}
         <div className="w-5 h-5 flex flex-shrink-0 items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded cursor-pointer transition-colors"
           onClick={() => hasChildren && dispatch({ type: 'TOGGLE_COLLAPSE', id })}>
           {hasChildren
@@ -320,9 +326,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             : null}
         </div>
 
-        {/* 完了トグル ＋ バレット（丸）
-            完了済み → CheckCircle
-            未完了   → Circle（小丸）＋ ホバー時に薄くCheckCircleを重ねる */}
+        {/* 完了トグル ＋ バレット
+            完了済み → CheckCircle（グレー）
+            未完了   → Circle（小丸のみ、ホバーでCheckCircleは出さない） */}
         <button
           onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
           className="relative flex-shrink-0 w-5 h-5 mx-1 flex items-center justify-center transition-colors"
@@ -331,10 +337,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
           {node.isCompleted ? (
             <CheckCircle size={16} className="text-gray-400" />
           ) : (
-            <>
-              <Circle size={8} className="fill-gray-400 text-gray-400" />
-              <CheckCircle size={16} className="absolute inset-0 m-auto text-gray-300 opacity-0 group-hover/node:opacity-100 transition-opacity" />
-            </>
+            <Circle size={8} className="fill-gray-400 text-gray-400" />
           )}
         </button>
 
@@ -374,6 +377,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                 type="date"
                 value={node.startDate}
                 onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
+                onClick={handleStartDateClick}
                 className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-blue-400 transition-colors ${!node.startDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
                 title="開始日"
               />
@@ -381,21 +385,23 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             <span className="text-gray-300 text-xs">–</span>
             <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-blue-400 focus-within:bg-white transition-all overflow-hidden">
               <input
+                ref={endDateRef}
                 type="date"
                 value={node.endDate}
                 min={node.startDate}
                 onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
+                onClick={handleEndDateClick}
                 className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-blue-400 transition-colors ${!node.endDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
                 title="終了日"
               />
             </div>
           </div>
 
-          {/* ゴミ箱ボタン */}
+          {/* ゴミ箱ボタン（selfHoveredで表示制御） */}
           <button
             onClick={handleDeleteClick}
             title="削除"
-            className="flex-shrink-0 ml-1.5 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors opacity-0 group-hover/node:opacity-100"
+            className={`flex-shrink-0 ml-1.5 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors ${selfHovered ? 'opacity-100' : 'opacity-0'}`}
           >
             <Trash2 size={13} />
           </button>
