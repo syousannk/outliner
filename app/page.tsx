@@ -484,30 +484,52 @@ function OutlinerApp({ user }: { user: User }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [fontSize, setFontSize] = useState<FontSize>('md');
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const prevDataRef = useRef({ nodes: initialState.nodes, title: 'My Outline' });
+  const prevDataRef = useRef({ nodes: initialState.nodes, title: 'My Outline', fontSize: 'md' as FontSize, filterMode: 'ALL' });
 
+  // Firestoreからロード（ノード・タイトル・設定）
   useEffect(() => {
     const docRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'outline', 'main');
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
-        const d = docSnap.data(); const rn = d.nodes || initialNodes; const rt = d.title || 'My Outline';
-        if (JSON.stringify(rn) !== JSON.stringify(prevDataRef.current.nodes) || rt !== prevDataRef.current.title) {
-          prevDataRef.current = { nodes: rn, title: rt };
-          dispatch({ type: 'SET_NODES', nodes: rn }); setTitle(rt);
+        const d = docSnap.data();
+        const rn = d.nodes || initialNodes;
+        const rt = d.title || 'My Outline';
+        const rf = (d.fontSize as FontSize) || 'md';
+        const rm = d.filterMode || 'ALL';
+        const prev = prevDataRef.current;
+        if (JSON.stringify(rn) !== JSON.stringify(prev.nodes) || rt !== prev.title) {
+          dispatch({ type: 'SET_NODES', nodes: rn });
+          setTitle(rt);
         }
-      } else { setDoc(docRef, { nodes: initialNodes, title: 'My Outline' }); }
+        if (rf !== prev.fontSize) setFontSize(rf);
+        if (rm !== prev.filterMode) setFilterMode(rm);
+        prevDataRef.current = { nodes: rn, title: rt, fontSize: rf, filterMode: rm };
+      } else {
+        setDoc(docRef, { nodes: initialNodes, title: 'My Outline', fontSize: 'md', filterMode: 'ALL' });
+      }
       setIsLoaded(true);
     }, () => setIsLoaded(true));
     return () => unsubscribe();
   }, [user]);
 
+  // ローカル変更をFirestoreに保存
   useEffect(() => {
     if (!isLoaded) return;
-    if (JSON.stringify(state.nodes) !== JSON.stringify(prevDataRef.current.nodes) || title !== prevDataRef.current.title) {
-      prevDataRef.current = { nodes: state.nodes, title };
-      setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'outline', 'main'), { nodes: state.nodes, title }, { merge: true });
+    const prev = prevDataRef.current;
+    if (
+      JSON.stringify(state.nodes) !== JSON.stringify(prev.nodes) ||
+      title !== prev.title ||
+      fontSize !== prev.fontSize ||
+      filterMode !== prev.filterMode
+    ) {
+      prevDataRef.current = { nodes: state.nodes, title, fontSize, filterMode };
+      setDoc(
+        doc(db, 'artifacts', APP_ID, 'users', user.uid, 'outline', 'main'),
+        { nodes: state.nodes, title, fontSize, filterMode },
+        { merge: true }
+      );
     }
-  }, [state.nodes, title, user, isLoaded]);
+  }, [state.nodes, title, fontSize, filterMode, user, isLoaded]);
 
   const handleDeleteRequest = useCallback((nodeId: string, snapshot: NodesMap) => {
     const node = snapshot[nodeId] as OutlineNode;
