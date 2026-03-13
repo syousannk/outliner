@@ -313,8 +313,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   return (
     <div
       className="flex flex-col relative"
-      onMouseEnter={() => setSelfHovered(true)}
-      onMouseLeave={() => setSelfHovered(false)}
+      onMouseEnter={(e) => { e.stopPropagation(); setSelfHovered(true); }}
+      onMouseLeave={(e) => { e.stopPropagation(); setSelfHovered(false); }}
     >
       <div className={`flex items-center ${pyClass}`}>
 
@@ -337,7 +337,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
           {node.isCompleted ? (
             <CheckCircle size={16} className="text-gray-400" />
           ) : (
-            <Circle size={8} className="fill-gray-400 text-gray-400" />
+            <Circle size={16} className="fill-gray-300 text-gray-300" />
           )}
         </button>
 
