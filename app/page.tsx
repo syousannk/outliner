@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useReducer, useEffect, useRef, useMemo, useCallback } from 'react';
-import { ChevronRight, ChevronDown, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, Type } from 'lucide-react';
+import { ChevronRight, ChevronDown, Circle, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, Type } from 'lucide-react';
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged, User, updateProfile,
@@ -19,6 +19,13 @@ interface OutlineNode {
 interface NodesMap { [key: string]: OutlineNode | { id: string; children: string[]; parent: null }; }
 type FontSize = 'sm' | 'md' | 'lg';
 interface ToastItem { id: string; nodeId: string; nodeText: string; snapshot: NodesMap; timer: ReturnType<typeof setTimeout>; remaining: number; startTime: number; }
+
+// フォントサイズごとのクラス定義（テキスト + 行間）
+const fontConfig: Record<FontSize, { text: string; leading: string; py: string }> = {
+  sm:  { text: 'text-sm',                  leading: 'leading-5',  py: 'py-0.5' },
+  md:  { text: 'text-[15px] sm:text-base', leading: 'leading-6',  py: 'py-1'   },
+  lg:  { text: 'text-lg sm:text-xl',       leading: 'leading-8',  py: 'py-1.5' },
+};
 
 const createNode = (overrides: Partial<OutlineNode> = {}): OutlineNode => ({
   id: generateId(), text: '', startDate: '', endDate: '',
@@ -230,17 +237,6 @@ function AuthScreen() {
   );
 }
 
-// --- 日付入力 ---
-const DateInput = ({ value, min, onChange, placeholder, onClick }: {
-  value: string; min?: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder: string; onClick?: () => void;
-}) => (
-  <input type="date" value={value} min={min} onChange={onChange} onClick={onClick}
-    className={`bg-transparent outline-none cursor-pointer w-[115px] text-xs sm:text-sm rounded px-1.5 py-1 hover:bg-gray-200 focus:ring-1 focus:ring-blue-400 transition-colors ${!value ? 'text-gray-400 opacity-60' : 'text-gray-700'}`}
-    title={placeholder} />
-);
-
 // --- ツリーアイテム ---
 interface TreeItemProps {
   id: string; nodes: NodesMap; dispatch: React.Dispatch<Action>;
@@ -248,29 +244,39 @@ interface TreeItemProps {
   fontSize: FontSize; onDeleteRequest: (id: string, snapshot: NodesMap) => void;
 }
 
-const fontSizeClasses: Record<FontSize, string> = { sm: 'text-sm', md: 'text-[15px] sm:text-base', lg: 'text-lg sm:text-xl' };
-
 const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFiltering, searchQuery, fontSize, onDeleteRequest }: TreeItemProps) => {
   const node = nodes[id] as OutlineNode;
   const inputRef = useRef<HTMLInputElement>(null);
   const startDateRef = useRef<HTMLInputElement>(null);
-  const endDateRef = useRef<HTMLInputElement>(null);
-  const [calendarVisible, setCalendarVisible] = useState(false);
+  // ホバー状態（デスクトップでカレンダー表示に使う）
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     if (focusId === id && inputRef.current) {
       inputRef.current.focus();
-      setTimeout(() => { if (inputRef.current) { const len = inputRef.current.value.length; inputRef.current.setSelectionRange(len, len); } }, 0);
+      setTimeout(() => {
+        if (inputRef.current) {
+          const len = inputRef.current.value.length;
+          inputRef.current.setSelectionRange(len, len);
+        }
+      }, 0);
     }
   }, [focusId, id]);
 
   if (isFiltering && !matched.has(id)) return null;
+
   const hasChildren = node.children.length > 0;
   const isExpanded = isFiltering ? true : !node.isCollapsed;
   const isHighlighted = searchQuery && node.text.toLowerCase().includes(searchQuery.toLowerCase());
   const hasDates = !!(node.startDate || node.endDate);
-  const showCalendar = hasDates || calendarVisible || focusId === id;
-  const textClass = fontSizeClasses[fontSize];
+  const isFocused = focusId === id;
+
+  // カレンダー表示ロジック:
+  // - 日付が設定済み → 常に表示
+  // - フォーカス中 → 表示
+  // - デスクトップ: ホバー時に表示 (sm:group-hover/node:opacity-100)
+  // - スマホ: 常に薄く表示 (opacity-30)
+  const { text: textClass, leading: leadingClass, py: pyClass } = fontConfig[fontSize];
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.nativeEvent.isComposing) return;
@@ -288,69 +294,133 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   };
 
   const handleCalendarIconClick = () => {
-    setCalendarVisible(true);
     setTimeout(() => startDateRef.current?.showPicker?.(), 50);
   };
 
-  const handleDateClick = () => {
-    setCalendarVisible(true);
-  };
+  // カレンダーの表示クラス:
+  // hasDates or isFocused → 完全表示
+  // それ以外: スマホ=opacity-30(薄く常時表示), デスクトップ=opacity-0でhover時に表示
+  const calendarVisibilityClass = hasDates || isFocused
+    ? 'opacity-100'
+    : 'opacity-30 sm:opacity-0 sm:group-hover/node:opacity-100 transition-opacity duration-150';
 
   return (
-    <div className="flex flex-col relative group/node">
-      <div className="flex items-center py-1">
-        {/* 折りたたみ */}
-        <div className="w-6 h-6 flex flex-shrink-0 items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded cursor-pointer transition-colors"
-          onClick={() => dispatch({ type: 'TOGGLE_COLLAPSE', id })}>
-          {hasChildren ? (node.isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />) : null}
+    <div
+      className="flex flex-col relative group/node"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className={`flex items-center ${pyClass}`}>
+
+        {/* 折りたたみアイコン（子あり時のみ）― 子なしは同サイズのスペーサー */}
+        <div className="w-5 h-5 flex flex-shrink-0 items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded cursor-pointer transition-colors"
+          onClick={() => hasChildren && dispatch({ type: 'TOGGLE_COLLAPSE', id })}>
+          {hasChildren
+            ? (node.isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />)
+            : null}
         </div>
-        {/* 完了トグル */}
-        <button onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
-          className={`flex-shrink-0 mx-1 flex items-center justify-center transition-colors ${node.isCompleted ? 'text-gray-400' : 'text-gray-300 hover:text-gray-400'}`}>
-          <CheckCircle size={18} className={node.isCompleted ? 'opacity-100' : 'opacity-0 group-hover/node:opacity-100 transition-opacity'} />
+
+        {/* 完了トグル ＋ バレット（丸）
+            完了済み → CheckCircle
+            未完了   → Circle（小丸）＋ ホバー時に薄くCheckCircleを重ねる */}
+        <button
+          onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
+          className="relative flex-shrink-0 w-5 h-5 mx-1 flex items-center justify-center transition-colors"
+          title={node.isCompleted ? '未完了にする' : '完了にする'}
+        >
+          {node.isCompleted ? (
+            <CheckCircle size={16} className="text-gray-400" />
+          ) : (
+            <>
+              <Circle size={8} className="fill-gray-400 text-gray-400" />
+              <CheckCircle size={16} className="absolute inset-0 m-auto text-gray-300 opacity-0 group-hover/node:opacity-100 transition-opacity" />
+            </>
+          )}
         </button>
+
         {/* メインコンテンツ */}
         <div className={`flex-1 flex flex-row items-center ml-1 overflow-hidden transition-all duration-300 ${node.isCompleted ? 'opacity-40 grayscale' : 'opacity-100'}`}>
+
+          {/* テキスト入力（幅可変） */}
           <div className="relative flex-shrink overflow-hidden min-w-[20px]">
-            <span className={`invisible whitespace-pre block px-1 py-1 ${textClass} pointer-events-none`}>{node.text || 'タスクを入力'}</span>
-            <input ref={inputRef} value={node.text} onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
-              onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); setCalendarVisible(true); }}
-              onBlur={() => { if (!hasDates) setCalendarVisible(false); }}
-              onKeyDown={handleKeyDown} placeholder="タスクを入力"
-              className={`absolute inset-0 w-full h-full bg-transparent outline-none py-1 ${textClass} transition-colors duration-300 ${isHighlighted ? 'bg-yellow-200/50 rounded px-1' : 'px-1'} ${node.isCompleted ? 'text-gray-500 line-through' : 'text-gray-900'}`} />
+            <span className={`invisible whitespace-pre block px-1 ${pyClass} ${textClass} ${leadingClass} pointer-events-none`}>
+              {node.text || 'タスクを入力'}
+            </span>
+            <input
+              ref={inputRef}
+              value={node.text}
+              onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
+              onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
+              onKeyDown={handleKeyDown}
+              placeholder="タスクを入力"
+              className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${textClass} ${leadingClass} transition-colors duration-300
+                ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
+                ${node.isCompleted ? 'text-gray-500 line-through' : 'text-gray-900'}`}
+            />
           </div>
+
           {/* リーダー線 */}
-          <div className="flex-1 border-t-[0.5px] border-solid border-gray-300 mx-2 min-w-[16px]" />
-          {/* カレンダー */}
-          <div className={`flex-shrink-0 flex items-center space-x-1 sm:space-x-2 text-sm transition-opacity duration-200 ${showCalendar ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mx-2 min-w-[12px]" />
+
+          {/* カレンダー（開始日・終了日） */}
+          <div className={`flex-shrink-0 flex items-center space-x-1 ${calendarVisibilityClass}`}>
             <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-blue-400 focus-within:bg-white transition-all overflow-hidden">
-              <Calendar className="w-3.5 h-3.5 text-gray-400 ml-2 cursor-pointer" onClick={handleCalendarIconClick} />
-              <input ref={startDateRef} type="date" value={node.startDate} onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
-                onClick={handleDateClick}
-                className={`bg-transparent outline-none cursor-pointer w-[115px] text-xs sm:text-sm rounded px-1.5 py-1 hover:bg-gray-200 focus:ring-1 focus:ring-blue-400 transition-colors ${!node.startDate ? 'text-gray-400 opacity-60' : 'text-gray-700'}`}
-                title="開始日" />
+              <Calendar
+                className="w-3 h-3 text-gray-400 ml-1.5 cursor-pointer flex-shrink-0"
+                onClick={handleCalendarIconClick}
+              />
+              <input
+                ref={startDateRef}
+                type="date"
+                value={node.startDate}
+                onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
+                className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-blue-400 transition-colors ${!node.startDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
+                title="開始日"
+              />
             </div>
-            <span className="text-gray-300">-</span>
+            <span className="text-gray-300 text-xs">–</span>
             <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-blue-400 focus-within:bg-white transition-all overflow-hidden">
-              <input ref={endDateRef} type="date" value={node.endDate} min={node.startDate} onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
-                onClick={handleDateClick}
-                className={`bg-transparent outline-none cursor-pointer w-[115px] text-xs sm:text-sm rounded px-1.5 py-1 hover:bg-gray-200 focus:ring-1 focus:ring-blue-400 transition-colors ${!node.endDate ? 'text-gray-400 opacity-60' : 'text-gray-700'}`}
-                title="終了日" />
+              <input
+                type="date"
+                value={node.endDate}
+                min={node.startDate}
+                onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
+                className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-blue-400 transition-colors ${!node.endDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
+                title="終了日"
+              />
             </div>
           </div>
+
           {/* ゴミ箱ボタン */}
-          <button onClick={handleDeleteClick} title="削除"
-            className="flex-shrink-0 ml-2 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors opacity-0 group-hover/node:opacity-100">
-            <Trash2 size={14} />
+          <button
+            onClick={handleDeleteClick}
+            title="削除"
+            className="flex-shrink-0 ml-1.5 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors opacity-0 group-hover/node:opacity-100"
+          >
+            <Trash2 size={13} />
           </button>
         </div>
       </div>
+
+      {/* 子ノード ― 縦線は完了ボタン（バレット）の中心から出す
+          完了ボタン幅: w-5(20px) + mx-1(4px×2) = 28px
+          折りたたみアイコン幅: w-5(20px)
+          合計オフセット: 20 + 2(mx-1の左) + 10(w-5の中心) = 32px → ml-8 = 32px */}
       {isExpanded && hasChildren && (
-        <div className="relative ml-[11px] pl-4 border-l-[0.5px] border-gray-300">
+        <div className="relative ml-8 pl-3 border-l border-gray-200">
           {node.children.map((childId: string) => (
-            <TreeItem key={childId} id={childId} nodes={nodes} dispatch={dispatch} focusId={focusId}
-              matched={matched} isFiltering={isFiltering} searchQuery={searchQuery}
-              fontSize={fontSize} onDeleteRequest={onDeleteRequest} />
+            <TreeItem
+              key={childId}
+              id={childId}
+              nodes={nodes}
+              dispatch={dispatch}
+              focusId={focusId}
+              matched={matched}
+              isFiltering={isFiltering}
+              searchQuery={searchQuery}
+              fontSize={fontSize}
+              onDeleteRequest={onDeleteRequest}
+            />
           ))}
         </div>
       )}
@@ -359,7 +429,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
 });
 TreeItem.displayName = 'TreeItem';
 
-// --- トースト ---
+// --- 元に戻すトースト ---
 function UndoToast({ toasts, onUndo, onDismiss }: {
   toasts: ToastItem[];
   onUndo: (toast: ToastItem) => void;
@@ -377,14 +447,13 @@ function UndoToast({ toasts, onUndo, onDismiss }: {
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center">
       {toasts.map(toast => {
         const elapsed = Date.now() - toast.startTime;
-        const remaining = Math.max(0, 8000 - elapsed);
-        const progress = remaining / 8000;
+        const progress = Math.max(0, (8000 - elapsed) / 8000);
         return (
-          <div key={toast.id} className="flex items-center gap-3 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-lg min-w-[300px]">
+          <div key={toast.id} className="flex items-center gap-3 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-lg min-w-[300px] max-w-[90vw]">
             <div className="flex-1 min-w-0">
               <p className="text-sm truncate">「{toast.nodeText || '(空のタスク)'}」を削除しました</p>
               <div className="mt-1.5 h-1 bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-400 rounded-full transition-none" style={{ width: `${progress * 100}%` }} />
+                <div className="h-full bg-blue-400 rounded-full" style={{ width: `${progress * 100}%`, transition: 'none' }} />
               </div>
             </div>
             <button onClick={() => onUndo(toast)}
@@ -402,23 +471,24 @@ function UndoToast({ toasts, onUndo, onDismiss }: {
 // --- アウトライナー本体 ---
 function OutlinerApp({ user }: { user: User }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState('ALL');
-  const [title, setTitle] = useState("My Outline");
+  const [title, setTitle] = useState('My Outline');
   const [isLoaded, setIsLoaded] = useState(false);
   const [fontSize, setFontSize] = useState<FontSize>('md');
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const prevDataRef = useRef({ nodes: initialState.nodes, title: "My Outline" });
+  const prevDataRef = useRef({ nodes: initialState.nodes, title: 'My Outline' });
 
   useEffect(() => {
     const docRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'outline', 'main');
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
-        const d = docSnap.data(); const rn = d.nodes || initialNodes; const rt = d.title || "My Outline";
+        const d = docSnap.data(); const rn = d.nodes || initialNodes; const rt = d.title || 'My Outline';
         if (JSON.stringify(rn) !== JSON.stringify(prevDataRef.current.nodes) || rt !== prevDataRef.current.title) {
-          prevDataRef.current = { nodes: rn, title: rt }; dispatch({ type: 'SET_NODES', nodes: rn }); setTitle(rt);
+          prevDataRef.current = { nodes: rn, title: rt };
+          dispatch({ type: 'SET_NODES', nodes: rn }); setTitle(rt);
         }
-      } else { setDoc(docRef, { nodes: initialNodes, title: "My Outline" }); }
+      } else { setDoc(docRef, { nodes: initialNodes, title: 'My Outline' }); }
       setIsLoaded(true);
     }, () => setIsLoaded(true));
     return () => unsubscribe();
@@ -435,13 +505,8 @@ function OutlinerApp({ user }: { user: User }) {
   const handleDeleteRequest = useCallback((nodeId: string, snapshot: NodesMap) => {
     const node = snapshot[nodeId] as OutlineNode;
     const toastId = generateId();
-    const timer = setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== toastId));
-    }, 8000);
-    setToasts(prev => [...prev, {
-      id: toastId, nodeId, nodeText: node?.text || '', snapshot,
-      timer, remaining: 8000, startTime: Date.now(),
-    }]);
+    const timer = setTimeout(() => setToasts(prev => prev.filter(t => t.id !== toastId)), 8000);
+    setToasts(prev => [...prev, { id: toastId, nodeId, nodeText: node?.text || '', snapshot, timer, remaining: 8000, startTime: Date.now() }]);
   }, []);
 
   const handleUndo = useCallback((toast: ToastItem) => {
@@ -458,38 +523,48 @@ function OutlinerApp({ user }: { user: User }) {
 
   const { isFiltering, matched } = useFilteredNodes(state.nodes, searchQuery, filterMode);
 
-  if (!isLoaded) return <div className="min-h-screen flex items-center justify-center bg-white text-gray-400"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+  if (!isLoaded) return (
+    <div className="min-h-screen flex items-center justify-center bg-white text-gray-400">
+      <Loader2 className="w-8 h-8 animate-spin" />
+    </div>
+  );
 
-  const fontSizeLabels: Record<FontSize, string> = { sm: 'S', md: 'M', lg: 'L' };
   const fontSizeOrder: FontSize[] = ['sm', 'md', 'lg'];
 
   return (
     <div className="min-h-screen bg-white text-gray-800 font-sans flex flex-col">
       <header className="sticky top-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 p-3 shadow-sm">
-        <div className="w-full max-w-5xl mx-auto flex items-center gap-2 flex-wrap">
-          {/* 検索バー（幅を抑える） */}
-          <div className="w-48 sm:w-56 flex items-center bg-gray-100 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-blue-400 transition-shadow">
-            <Search className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
-            <input type="text" placeholder="検索..." className="w-full bg-transparent outline-none text-sm placeholder-gray-400" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+        <div className="w-full max-w-5xl mx-auto flex items-center gap-2">
+
+          {/* 検索バー */}
+          <div className="w-44 sm:w-52 flex items-center bg-gray-100 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-400 transition-shadow flex-shrink-0">
+            <Search className="w-3.5 h-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="検索..."
+              className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
           </div>
 
           {/* フィルター */}
-          <div className="flex items-center bg-gray-100 p-1 rounded-lg">
+          <div className="flex items-center bg-gray-100 p-0.5 rounded-lg flex-shrink-0">
             {(['ALL', 'ACTIVE', 'COMPLETED'] as const).map((m) => (
               <button key={m} onClick={() => setFilterMode(m)}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${filterMode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                className={`px-2 py-1 text-xs font-medium rounded-md transition-all ${filterMode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
                 {m === 'ALL' ? 'すべて' : m === 'ACTIVE' ? '未完了' : '完了済み'}
               </button>
             ))}
           </div>
 
           {/* 文字サイズ */}
-          <div className="flex items-center bg-gray-100 p-1 rounded-lg gap-0.5" title="文字サイズ">
-            <Type className="w-3.5 h-3.5 text-gray-400 mx-1" />
+          <div className="flex items-center bg-gray-100 p-0.5 rounded-lg flex-shrink-0" title="文字サイズ">
+            <Type className="w-3 h-3 text-gray-400 mx-1" />
             {fontSizeOrder.map((s) => (
               <button key={s} onClick={() => setFontSize(s)}
-                className={`w-7 h-7 text-xs font-medium rounded-md transition-all ${fontSize === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                {fontSizeLabels[s]}
+                className={`w-6 h-6 text-xs font-medium rounded-md transition-all ${fontSize === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {s === 'sm' ? 'S' : s === 'md' ? 'M' : 'L'}
               </button>
             ))}
           </div>
@@ -497,10 +572,19 @@ function OutlinerApp({ user }: { user: User }) {
           {/* スペーサー */}
           <div className="flex-1" />
 
-          {/* ユーザー情報 */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 hidden sm:block max-w-[200px] truncate" title={user.email || ''}>{user.displayName || user.email}</span>
-            <button onClick={() => signOut(auth)} title="ログアウト" className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+          {/* メールアドレス ＋ ログアウト */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span
+              className="text-sm text-gray-500 hidden sm:block max-w-[220px] truncate"
+              title={user.email || ''}
+            >
+              {user.email}
+            </span>
+            <button
+              onClick={() => signOut(auth)}
+              title="ログアウト"
+              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
               <LogOut className="w-4 h-4" />
             </button>
           </div>
@@ -510,19 +594,36 @@ function OutlinerApp({ user }: { user: User }) {
       <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-8 pb-24 overflow-x-auto">
         <div className="min-w-[700px] pr-4">
           <div className="mb-8 px-2">
-            <input value={title} onChange={e => setTitle(e.target.value)}
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
               className="text-2xl sm:text-3xl font-bold text-gray-900 bg-transparent outline-none w-full border-b-2 border-transparent hover:border-gray-200 focus:border-blue-400 transition-colors pb-1"
-              placeholder="タイトルを入力..." />
+              placeholder="タイトルを入力..."
+            />
           </div>
-          <div className="tree-root space-y-0.5">
+
+          <div className="tree-root">
             {(state.nodes['root'] as OutlineNode).children.map((id: string) => (
-              <TreeItem key={id} id={id} nodes={state.nodes} dispatch={dispatch} focusId={state.focusId}
-                matched={matched} isFiltering={isFiltering} searchQuery={searchQuery}
-                fontSize={fontSize} onDeleteRequest={handleDeleteRequest} />
+              <TreeItem
+                key={id}
+                id={id}
+                nodes={state.nodes}
+                dispatch={dispatch}
+                focusId={state.focusId}
+                matched={matched}
+                isFiltering={isFiltering}
+                searchQuery={searchQuery}
+                fontSize={fontSize}
+                onDeleteRequest={handleDeleteRequest}
+              />
             ))}
           </div>
+
           {!isFiltering && (state.nodes['root'] as OutlineNode).children.length === 0 && (
-            <button className="flex items-center text-gray-500 hover:text-gray-900 mt-4 px-2 py-1 rounded transition-colors hover:bg-gray-100" onClick={() => dispatch({ type: 'ADD_NODE', isRoot: true })}>
+            <button
+              className="flex items-center text-gray-500 hover:text-gray-900 mt-4 px-2 py-1 rounded transition-colors hover:bg-gray-100"
+              onClick={() => dispatch({ type: 'ADD_NODE', isRoot: true })}
+            >
               <Plus className="w-4 h-4 mr-2" /> タスクを追加
             </button>
           )}
@@ -544,7 +645,11 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-white text-gray-400"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+  if (authLoading) return (
+    <div className="min-h-screen flex items-center justify-center bg-white text-gray-400">
+      <Loader2 className="w-8 h-8 animate-spin" />
+    </div>
+  );
   if (!user) return <AuthScreen />;
   return <OutlinerApp user={user} />;
 }
