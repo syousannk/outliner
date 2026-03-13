@@ -5,7 +5,14 @@ import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged }
 import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // --- Firebase 初期化 ---
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const firebaseConfig = {
+  apiKey: "AIzaSyBKqakXeA61gGxq9IFXjxT7DeYdJkiJ_TQ",
+  authDomain: "outliner-46d0f.firebaseapp.com",
+  projectId: "outliner-46d0f",
+  storageBucket: "outliner-46d0f.firebasestorage.app",
+  messagingSenderId: "783542018274",
+  appId: "1:783542018274:web:9dd9d004c584266aa2febb"
+};
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
