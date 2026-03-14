@@ -788,7 +788,7 @@ function OutlinerApp({ user }: { user: User }) {
   return (
     <div className="min-h-screen bg-white text-gray-800 font-sans flex flex-col">
       <header className="sticky top-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 shadow-sm">
-        <div className="w-full max-w-5xl mx-auto px-3 py-2 flex flex-col gap-2">
+        <div className="w-full max-w-5xl mx-auto px-4 sm:px-8 py-2 flex flex-col gap-2">
 
           {/* 1行目：アイコン ＋ 検索バー ＋ メール ＋ ログアウト */}
           <div className="flex items-center gap-2">
@@ -813,15 +813,15 @@ function OutlinerApp({ user }: { user: User }) {
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg">
               <button onClick={() => setFilterMode('ALL')} title="すべて"
                 className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'ALL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
-                <List size={14} />
+                <List size={16} />
               </button>
               <button onClick={() => setFilterMode('ACTIVE')} title="未完了"
                 className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'ACTIVE' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
-                <CircleDot size={14} />
+                <CircleDot size={16} />
               </button>
               <button onClick={() => setFilterMode('COMPLETED')} title="完了済み"
                 className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'COMPLETED' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
-                <CircleCheck size={14} />
+                <CircleCheck size={16} />
               </button>
             </div>
 
@@ -829,9 +829,9 @@ function OutlinerApp({ user }: { user: User }) {
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5" title="開始日">
               <span className="text-[9px] text-gray-400 px-1.5 font-medium select-none">開始日</span>
               {([
-                { key: 'START_TODAY',    icon: <CalendarDays size={13} />,   title: '開始: 今日' },
-                { key: 'START_TOMORROW', icon: <CalendarCheck2 size={13} />, title: '開始: 明日' },
-                { key: 'START_OVERDUE',  icon: <CalendarX2 size={13} />,    title: '開始: 期限切れ' },
+                { key: 'START_TODAY',    icon: <CalendarDays size={16} />,   title: '開始: 今日' },
+                { key: 'START_TOMORROW', icon: <CalendarCheck2 size={16} />, title: '開始: 明日' },
+                { key: 'START_OVERDUE',  icon: <CalendarX2 size={16} />,    title: '開始: 期限切れ' },
               ] as const).map(({ key, icon, title }) => (
                 <button key={key}
                   onClick={() => setFilterMode(filterMode === key ? 'ALL' : key)}
@@ -846,9 +846,9 @@ function OutlinerApp({ user }: { user: User }) {
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5" title="終了日">
               <span className="text-[9px] text-gray-400 px-1.5 font-medium select-none">終了日</span>
               {([
-                { key: 'END_TODAY',    icon: <CalendarDays size={13} />,   title: '終了: 今日' },
-                { key: 'END_TOMORROW', icon: <CalendarCheck2 size={13} />, title: '終了: 明日' },
-                { key: 'END_OVERDUE',  icon: <CalendarX2 size={13} />,    title: '終了: 期限切れ' },
+                { key: 'END_TODAY',    icon: <CalendarDays size={16} />,   title: '終了: 今日' },
+                { key: 'END_TOMORROW', icon: <CalendarCheck2 size={16} />, title: '終了: 明日' },
+                { key: 'END_OVERDUE',  icon: <CalendarX2 size={16} />,    title: '終了: 期限切れ' },
               ] as const).map(({ key, icon, title }) => (
                 <button key={key}
                   onClick={() => setFilterMode(filterMode === key ? 'ALL' : key)}
