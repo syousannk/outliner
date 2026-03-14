@@ -2,8 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-@keyframes strike-grow   { from { width: 0%;    } to { width: 100%; } }
-@keyframes strike-shrink { from { width: 100%;  } to { width: 0%;   } }
+@keyframes strike-grow   { from { width: 0%;   } to { width: 100%; } }
+@keyframes strike-shrink { from { width: 100%; } to { width: 0%;   } }
 
 .strike-line {
   position: absolute;
@@ -13,6 +13,3 @@
   background-color: #9ca3af;
   pointer-events: none;
 }
-.strike-line.in   { left:  0; right: auto; width: 0%;    animation: strike-grow   0.5s ease-out forwards; }
-.strike-line.done { left:  0; right: auto; width: 100%;  animation: none; }
-.strike-line.out  { right: 0; left:  auto; width: 100%;  animation: strike-shrink 0.5s ease-out forwards; }

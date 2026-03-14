@@ -384,21 +384,28 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     </div>
   );
 
-  // 取り消し線のみ。文字色は input/textarea の transition-colors に任せる。
-  const strikeOverlay = (inline: boolean) => {
-    if (!strikeState) return null;
-    return (
-      <div className="pointer-events-none absolute inset-0 flex items-center overflow-hidden" aria-hidden>
+  // 取り消し線。常時DOMに存在させてクラス切り替えのみでアニメーション制御。
+  // （再マウントするとアニメーションが初期状態からやり直しになるため）
+  const strikeOverlay = (inline: boolean) => (
+    <div className="pointer-events-none absolute inset-0 flex items-center overflow-hidden" aria-hidden>
+      <span
+        style={{ color: 'transparent' }}
+        className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS} px-1`}
+      >
+        {node.text || '\u00A0'}
+        {/* strikeState が null でも span を残す（display:none ではなく width:0 で消す） */}
         <span
-          style={{ color: 'transparent' }}
-          className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS} px-1`}
-        >
-          {node.text || '\u00A0'}
-          <span className={`strike-line ${strikeState}`} />
-        </span>
-      </div>
-    );
-  };
+          className="strike-line"
+          style={
+            strikeState === 'in'   ? { left: 0, right: 'auto', width: 0, animation: 'strike-grow 0.5s ease-out forwards' } :
+            strikeState === 'done' ? { left: 0, right: 'auto', width: '100%', animation: 'none' } :
+            strikeState === 'out'  ? { right: 0, left: 'auto', width: '100%', animation: 'strike-shrink 0.5s ease-out forwards' } :
+            { width: 0, animation: 'none' }
+          }
+        />
+      </span>
+    </div>
+  );
 
   return (
     <div className="mb-0.5">
