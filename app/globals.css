@@ -2,14 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
-@keyframes strike-grow   { from { width: 0%;   } to { width: 100%; } }
-@keyframes strike-shrink { from { width: 100%; } to { width: 0%;   } }
+/* 取り消し線はclip-pathで表示/非表示を制御
+   完了時: 右端から左端へclipが広がる（線が左→右に現れる）
+   取消時: 左端から右端へclipが広がる（線が右→左に消える）
+*/
+@keyframes reveal-ltr {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0%   0 0); }
+}
+@keyframes hide-rtl {
+  from { clip-path: inset(0 0%   0 0); }
+  to   { clip-path: inset(0 100% 0 0); }
+}
 
 .strike-line {
   position: absolute;
+  left: 0;
+  right: 0;
   top: 50%;
   margin-top: -1px;
   height: 1.5px;
   background-color: #9ca3af;
   pointer-events: none;
 }
+
+.strike-line.in   { animation: reveal-ltr 0.5s ease-out forwards; }
+.strike-line.done { clip-path: inset(0 0% 0 0); animation: none; }
+.strike-line.out  { animation: hide-rtl  0.5s ease-out forwards; }
