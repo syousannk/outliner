@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useReducer, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Circle, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, AlignJustify } from 'lucide-react';
+import { Circle, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, AlignJustify, Type } from 'lucide-react';
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged, User, updateProfile,
@@ -31,8 +31,8 @@ const fontConfig: Record<FontSize, { text: string; leading: string; py: string }
 // 行間設定（ルートレベルのタスク間マージン）
 const lineSpacingConfig: Record<LineSpacing, string> = {
   compact: 'mb-0',
-  normal:  'mb-1.5',
-  relaxed: 'mb-4',
+  normal:  'mb-1',
+  relaxed: 'mb-2.5',
 };
 
 const createNode = (overrides: Partial<OutlineNode> = {}): OutlineNode => ({
@@ -408,10 +408,10 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const spacingClass = lineSpacingConfig[lineSpacing];
 
   return (
-    <div className={`flex flex-row items-start ${spacingClass}`}>
+    <div className={`flex flex-row ${spacingClass}`}>
 
-      {/* バレット列 */}
-      <div className="flex flex-col flex-shrink-0 w-7">
+      {/* バレット列：コンテンツ列と同じpyを付けて高さを揃える */}
+      <div className={`flex flex-col flex-shrink-0 w-7 ${pyClass}`}>
         <button
           onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
           className={`w-5 h-5 mx-1 flex items-center justify-center flex-shrink-0 transition-opacity ${node.isCompleted ? 'opacity-40' : ''}`}
@@ -429,7 +429,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       {/* コンテンツ列 */}
       <div className="flex-1 min-w-0">
         <div
-          className={`flex flex-col sm:flex-row sm:items-center ${pyClass} gap-0.5`}
+          className={`flex flex-col sm:flex-row sm:items-center gap-0.5`}
           onMouseEnter={() => setSelfHovered(true)}
           onMouseLeave={() => setSelfHovered(false)}
         >
@@ -467,8 +467,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                       ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
                   {strikeState && (
-                    <div className="pointer-events-none absolute inset-0 px-1 overflow-hidden" aria-hidden>
-                      <span className={`relative inline-block invisible ${textClass} ${leadingClass} whitespace-pre-wrap break-all`}>
+                    <div className="pointer-events-none absolute inset-0 px-1 overflow-hidden text-gray-400" aria-hidden>
+                      <span className={`relative inline-block opacity-0 ${textClass} ${leadingClass} whitespace-pre-wrap break-all`}>
                         {node.text || '\u00A0'}
                         <span className={`strike-line ${strikeState === 'completed' ? 'in' : 'out'}`} />
                       </span>
@@ -495,8 +495,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                       ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
                   {strikeState && (
-                    <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden" aria-hidden>
-                      <span className="relative invisible whitespace-pre">
+                    <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden text-gray-400" aria-hidden>
+                      <span className="relative opacity-0 whitespace-pre">
                         {node.text || '\u00A0'}
                         <span className={`strike-line ${strikeState === 'completed' ? 'in' : 'out'}`} />
                       </span>
@@ -720,6 +720,7 @@ function OutlinerApp({ user }: { user: User }) {
 
             {/* 文字サイズ */}
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg" title="文字サイズ">
+              <Type className="w-3 h-3 text-gray-400 mx-1" />
               {(['sm', 'md', 'lg'] as FontSize[]).map((s) => (
                 <button key={s} onClick={() => setFontSize(s)}
                   className={`w-6 h-6 text-xs font-medium rounded-md transition-all ${fontSize === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
