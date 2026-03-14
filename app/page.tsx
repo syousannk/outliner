@@ -449,9 +449,10 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       <div className="flex items-center bg-gray-100 rounded-md border border-gray-200 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
         <input ref={startDateRef} type="date" value={node.startDate}
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
-          className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.startDate ? 'text-gray-500' : 'text-gray-600'}`}
+          className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors
+            ${!node.startDate ? 'text-gray-500' : 'text-gray-600'}
+            ${node.isCompleted && node.startDate ? 'line-through decoration-gray-400' : ''}`}
           title="開始日" />
-        {/* 常時表示で幅確保、日付なし時は invisible */}
         <button
           onClick={() => node.startDate && dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' })}
           className={`px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ${node.startDate ? 'visible' : 'invisible'}`}
@@ -461,9 +462,10 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       <div className="flex items-center bg-gray-100 rounded-md border border-gray-200 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
         <input ref={endDateRef} type="date" value={node.endDate} min={node.startDate}
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
-          className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.endDate ? 'text-gray-500' : 'text-gray-600'}`}
+          className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors
+            ${!node.endDate ? 'text-gray-500' : 'text-gray-600'}
+            ${node.isCompleted && node.endDate ? 'line-through decoration-gray-400' : ''}`}
           title="終了日" />
-        {/* 常時表示で幅確保、日付なし時は invisible */}
         <button
           onClick={() => node.endDate && dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' })}
           className={`px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ${node.endDate ? 'visible' : 'invisible'}`}
