@@ -767,6 +767,7 @@ function OutlinerApp({ user }: { user: User }) {
                 isFiltering={isFiltering}
                 searchQuery={searchQuery}
                 fontSize={fontSize}
+                lineSpacing={lineSpacing}
                 onDeleteRequest={handleDeleteRequest}
               />
             ))}
