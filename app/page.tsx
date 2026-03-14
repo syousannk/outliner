@@ -126,11 +126,21 @@ function reducer(state: State, action: Action): State {
   }
 }
 
+// 今日・明日の日付文字列を返す
+const getDateStr = (offsetDays: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+};
+
 const useFilteredNodes = (nodes: NodesMap, searchQuery: string, filterMode: string) => {
   return useMemo(() => {
     const isFiltering = searchQuery !== "" || filterMode !== 'ALL';
     if (!isFiltering) return { isFiltering: false, matched: new Set<string>() };
     const matched = new Set<string>(); const query = searchQuery.toLowerCase();
+    const today = getDateStr(0);
+    const tomorrow = getDateStr(1);
+
     const checkMatch = (id: string): boolean => {
       if (id === 'root') { (nodes[id] as OutlineNode).children.forEach(checkMatch); return false; }
       const node = nodes[id] as OutlineNode;
@@ -138,6 +148,14 @@ const useFilteredNodes = (nodes: NodesMap, searchQuery: string, filterMode: stri
       let matchFilter = true;
       if (filterMode === 'ACTIVE') matchFilter = !node.isCompleted;
       if (filterMode === 'COMPLETED') matchFilter = node.isCompleted;
+      // 開始日フィルター
+      if (filterMode === 'START_TODAY')    matchFilter = node.startDate === today;
+      if (filterMode === 'START_TOMORROW') matchFilter = node.startDate === tomorrow;
+      if (filterMode === 'START_OVERDUE')  matchFilter = !!node.startDate && node.startDate < today && !node.isCompleted;
+      // 終了日フィルター
+      if (filterMode === 'END_TODAY')    matchFilter = node.endDate === today;
+      if (filterMode === 'END_TOMORROW') matchFilter = node.endDate === tomorrow;
+      if (filterMode === 'END_OVERDUE')  matchFilter = !!node.endDate && node.endDate < today && !node.isCompleted;
       let childMatch = false;
       node.children.forEach((cid: string) => { if (checkMatch(cid)) childMatch = true; });
       const isMatch = (matchQuery && matchFilter) || childMatch;
@@ -337,6 +355,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const dateAreaClass = showDateArea ? 'opacity-100' : 'opacity-0 sm:opacity-0';
 
   // 日付エリア（PC・スマホ共通）
+  // ×ボタンは常時レンダリング（日付なし時は invisible）して幅を確保しズレを防ぐ
   const dateArea = (
     <div className={`flex items-center gap-1 transition-opacity duration-150 ${dateAreaClass}`}>
       <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
@@ -344,10 +363,11 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
           className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.startDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
           title="開始日" />
-        {node.startDate && (
-          <button onClick={() => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' })}
-            className="px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none" title="開始日を削除">×</button>
-        )}
+        {/* 常時表示で幅確保、日付なし時は invisible */}
+        <button
+          onClick={() => node.startDate && dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' })}
+          className={`px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ${node.startDate ? 'visible' : 'invisible'}`}
+          title="開始日を削除">×</button>
       </div>
       <span className="text-gray-300 text-xs flex-shrink-0">–</span>
       <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
@@ -355,19 +375,18 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
           className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.endDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
           title="終了日" />
-        {node.endDate && (
-          <button onClick={() => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' })}
-            className="px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none" title="終了日を削除">×</button>
-        )}
+        {/* 常時表示で幅確保、日付なし時は invisible */}
+        <button
+          onClick={() => node.endDate && dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' })}
+          className={`px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ${node.endDate ? 'visible' : 'invisible'}`}
+          title="終了日を削除">×</button>
       </div>
     </div>
   );
 
   // 取り消し線オーバーレイ
-  // 取り消し線オーバーレイ
-  // テキストを color:transparent にして文字を非表示にしつつ、
-  // strike-line（absolute配置）だけを表示する。
-  // opacity:0 だと子要素の strike-line も消えてしまうため使わない。
+  // テキストを color:transparent にして文字を非表示にしつつ strike-line だけ表示。
+  // 取り消し時（out）は黒文字を右→左にスライドインするレイヤーも重ねる。
   const strikeOverlay = (inline: boolean) => strikeState ? (
     <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden" aria-hidden>
       <span
@@ -377,6 +396,14 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         {node.text || '\u00A0'}
         <span className={`strike-line ${strikeState}`} />
       </span>
+      {/* 取り消し時: 黒文字を右→左にスライドイン（clip-pathアニメーション） */}
+      {strikeState === 'out' && (
+        <span
+          className={`text-restore ${inline ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS}`}
+        >
+          {node.text || '\u00A0'}
+        </span>
+      )}
     </div>
   ) : null;
 
@@ -668,8 +695,9 @@ function OutlinerApp({ user }: { user: User }) {
             </button>
           </div>
 
-          {/* 2行目：フィルター ＋ リロード */}
-          <div className="flex items-center gap-2">
+          {/* 2行目：フィルター ＋ 日付フィルター ＋ リロード */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* タスク状態フィルター */}
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg">
               <button onClick={() => setFilterMode('ALL')} title="すべて"
                 className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'ALL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
@@ -683,6 +711,38 @@ function OutlinerApp({ user }: { user: User }) {
                 className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'COMPLETED' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
                 <CircleCheck size={14} />
               </button>
+            </div>
+
+            {/* 開始日フィルター */}
+            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5">
+              <span className="text-[10px] text-gray-400 px-1 font-medium">開始</span>
+              {([
+                { key: 'START_TODAY',    label: '今日' },
+                { key: 'START_TOMORROW', label: '明日' },
+                { key: 'START_OVERDUE',  label: '期限切れ' },
+              ] as const).map(({ key, label }) => (
+                <button key={key}
+                  onClick={() => setFilterMode(filterMode === key ? 'ALL' : key)}
+                  className={`px-2 py-1 text-xs font-medium rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* 終了日フィルター */}
+            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5">
+              <span className="text-[10px] text-gray-400 px-1 font-medium">終了</span>
+              {([
+                { key: 'END_TODAY',    label: '今日' },
+                { key: 'END_TOMORROW', label: '明日' },
+                { key: 'END_OVERDUE',  label: '期限切れ' },
+              ] as const).map(({ key, label }) => (
+                <button key={key}
+                  onClick={() => setFilterMode(filterMode === key ? 'ALL' : key)}
+                  className={`px-2 py-1 text-xs font-medium rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  {label}
+                </button>
+              ))}
             </div>
 
             <button onClick={() => window.location.reload()} title="再読み込み"
