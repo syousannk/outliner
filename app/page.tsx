@@ -310,102 +310,137 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     ? 'opacity-100'
     : 'opacity-30 sm:opacity-0 transition-opacity duration-150';
 
+  // 日付エリアのJSX（PC・スマホ共通パーツ）
+  const dateArea = (
+    <div className={`flex items-center gap-1 ${calendarVisibilityClass}`}>
+      {/* 開始日 */}
+      <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
+        <Calendar className="w-3 h-3 text-gray-400 ml-1.5 cursor-pointer flex-shrink-0" onClick={handleCalendarIconClick} />
+        <input
+          ref={startDateRef}
+          type="date"
+          value={node.startDate}
+          onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
+          onClick={handleStartDateClick}
+          className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.startDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
+          title="開始日"
+        />
+        {node.startDate && (
+          <button onClick={() => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' })}
+            className="px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none" title="開始日を削除">×</button>
+        )}
+      </div>
+      <span className="text-gray-300 text-xs flex-shrink-0">–</span>
+      {/* 終了日 */}
+      <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
+        <input
+          ref={endDateRef}
+          type="date"
+          value={node.endDate}
+          min={node.startDate}
+          onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
+          onClick={handleEndDateClick}
+          className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.endDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
+          title="終了日"
+        />
+        {node.endDate && (
+          <button onClick={() => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' })}
+            className="px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none" title="終了日を削除">×</button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex flex-col relative">
-      {/* 行部分のみにホバーを適用（子ノードのdivと分離することで伝播を防ぐ） */}
+      {/* 行部分のみにホバーを適用 */}
       <div
-        className={`flex items-center ${pyClass}`}
+        className={`flex flex-col sm:flex-row sm:items-center ${pyClass} gap-0.5`}
         onMouseEnter={() => setSelfHovered(true)}
         onMouseLeave={() => setSelfHovered(false)}
       >
+        {/* 1行目：折りたたみ・バレット・テキスト・(PC時は日付・ゴミ箱もここ) */}
+        <div className="flex items-center flex-1 min-w-0">
 
-        {/* 折りたたみアイコン */}
-        <div className="w-5 h-5 flex flex-shrink-0 items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded cursor-pointer transition-colors"
-          onClick={() => hasChildren && dispatch({ type: 'TOGGLE_COLLAPSE', id })}>
-          {hasChildren
-            ? (node.isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />)
-            : null}
-        </div>
-
-        {/* 完了トグル ＋ バレット
-            完了済み → CheckCircle（グレー塗り）
-            未完了   → Circle（枠線のみ、背景なし） */}
-        <button
-          onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
-          className="relative flex-shrink-0 w-5 h-5 mx-1 flex items-center justify-center transition-colors"
-          title={node.isCompleted ? '未完了にする' : '完了にする'}
-        >
-          {node.isCompleted ? (
-            <CheckCircle size={16} className="text-gray-400" />
-          ) : (
-            <Circle size={16} className="text-gray-400" />
-          )}
-        </button>
-
-        {/* メインコンテンツ */}
-        <div className={`flex-1 flex flex-row items-center ml-1 overflow-hidden transition-all duration-300 ${node.isCompleted ? 'opacity-40 grayscale' : 'opacity-100'}`}>
-
-          {/* テキスト入力（幅可変） */}
-          <div className="relative flex-shrink overflow-hidden min-w-[20px]">
-            <span className={`invisible whitespace-pre block px-1 ${pyClass} ${textClass} ${leadingClass} pointer-events-none`}>
-              {node.text || 'タスクを入力'}
-            </span>
-            <input
-              ref={inputRef}
-              value={node.text}
-              onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
-              onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
-              onKeyDown={handleKeyDown}
-              placeholder="タスクを入力"
-              className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${textClass} ${leadingClass} transition-colors duration-300
-                ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                ${node.isCompleted ? 'text-gray-500 line-through' : 'text-gray-900'}`}
-            />
+          {/* 折りたたみアイコン */}
+          <div className="w-5 h-5 flex flex-shrink-0 items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded cursor-pointer transition-colors"
+            onClick={() => hasChildren && dispatch({ type: 'TOGGLE_COLLAPSE', id })}>
+            {hasChildren ? (node.isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />) : null}
           </div>
 
-          {/* リーダー線 */}
-          <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mx-2 min-w-[12px]" />
-
-          {/* カレンダー（開始日・終了日） */}
-          <div className={`flex-shrink-0 flex items-center space-x-1 ${calendarVisibilityClass}`}>
-            <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-blue-400 focus-within:bg-white transition-all overflow-hidden">
-              <Calendar
-                className="w-3 h-3 text-gray-400 ml-1.5 cursor-pointer flex-shrink-0"
-                onClick={handleCalendarIconClick}
-              />
-              <input
-                ref={startDateRef}
-                type="date"
-                value={node.startDate}
-                onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
-                onClick={handleStartDateClick}
-                className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-blue-400 transition-colors ${!node.startDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
-                title="開始日"
-              />
-            </div>
-            <span className="text-gray-300 text-xs">–</span>
-            <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-blue-400 focus-within:bg-white transition-all overflow-hidden">
-              <input
-                ref={endDateRef}
-                type="date"
-                value={node.endDate}
-                min={node.startDate}
-                onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
-                onClick={handleEndDateClick}
-                className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-blue-400 transition-colors ${!node.endDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
-                title="終了日"
-              />
-            </div>
-          </div>
-
-          {/* ゴミ箱ボタン（selfHoveredで表示制御） */}
+          {/* 完了トグル ＋ バレット */}
           <button
-            onClick={handleDeleteClick}
-            title="削除"
-            className={`flex-shrink-0 ml-1.5 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors ${selfHovered ? 'opacity-100' : 'opacity-0'}`}
+            onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
+            className="relative flex-shrink-0 w-5 h-5 mx-1 flex items-center justify-center transition-colors"
+            title={node.isCompleted ? '未完了にする' : '完了にする'}
           >
+            {node.isCompleted ? (
+              <CheckCircle size={16} className="text-gray-400" />
+            ) : (
+              <Circle size={16} className="text-gray-400" />
+            )}
+          </button>
+
+          {/* テキスト入力
+              スマホ: 折り返しあり（whitespace-normal, textarea的に高さ可変）
+              PC:     1行・リーダー線あり */}
+          <div className={`flex-1 min-w-0 transition-all duration-300 ${node.isCompleted ? 'opacity-40 grayscale' : 'opacity-100'}`}>
+
+            {/* スマホ: テキストを折り返し表示 */}
+            <div className="sm:hidden">
+              <input
+                ref={inputRef}
+                value={node.text}
+                onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
+                onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
+                onKeyDown={handleKeyDown}
+                placeholder="タスクを入力"
+                className={`w-full bg-transparent outline-none px-1 ${textClass} ${leadingClass} transition-colors duration-300
+                  ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
+                  ${node.isCompleted ? 'text-gray-500 line-through' : 'text-gray-900'}`}
+              />
+            </div>
+
+            {/* PC: テキスト幅可変 ＋ リーダー線 ＋ 日付 ＋ ゴミ箱 */}
+            <div className="hidden sm:flex sm:flex-row sm:items-center">
+              <div className="relative flex-shrink overflow-hidden min-w-[20px]">
+                <span className={`invisible whitespace-pre block px-1 ${pyClass} ${textClass} ${leadingClass} pointer-events-none`}>
+                  {node.text || 'タスクを入力'}
+                </span>
+                <input
+                  ref={inputRef}
+                  value={node.text}
+                  onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
+                  onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
+                  onKeyDown={handleKeyDown}
+                  placeholder="タスクを入力"
+                  className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${textClass} ${leadingClass} transition-colors duration-300
+                    ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
+                    ${node.isCompleted ? 'text-gray-500 line-through' : 'text-gray-900'}`}
+                />
+              </div>
+              {/* リーダー線 */}
+              <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mx-2 min-w-[12px]" />
+              {/* PC: 日付をここに表示 */}
+              {dateArea}
+              {/* ゴミ箱 */}
+              <button onClick={handleDeleteClick} title="削除"
+                className={`flex-shrink-0 ml-1.5 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors ${selfHovered ? 'opacity-100' : 'opacity-0'}`}>
+                <Trash2 size={13} />
+              </button>
+            </div>
+          </div>
+
+          {/* スマホ: ゴミ箱（1行目の右端） */}
+          <button onClick={handleDeleteClick} title="削除"
+            className="sm:hidden flex-shrink-0 ml-1 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors">
             <Trash2 size={13} />
           </button>
+        </div>
+
+        {/* スマホ: 2行目に日付を表示（バレット分インデント） */}
+        <div className="sm:hidden pl-12">
+          {dateArea}
         </div>
       </div>
 
@@ -589,7 +624,6 @@ function OutlinerApp({ user }: { user: User }) {
 
           {/* 文字サイズ */}
           <div className="flex items-center bg-gray-100 p-0.5 rounded-lg flex-shrink-0" title="文字サイズ">
-            <Type className="w-3 h-3 text-gray-400 mx-1" />
             {fontSizeOrder.map((s) => (
               <button key={s} onClick={() => setFontSize(s)}
                 className={`w-6 h-6 text-xs font-medium rounded-md transition-all ${fontSize === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
@@ -620,8 +654,8 @@ function OutlinerApp({ user }: { user: User }) {
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-8 pb-24 overflow-x-auto">
-        <div className="min-w-[700px] pr-4">
+      <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-8 pb-24">
+        <div className="sm:min-w-[700px] pr-2 sm:pr-4">
           <div className="mb-8 px-2">
             <input
               value={title}
