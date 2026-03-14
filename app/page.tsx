@@ -827,7 +827,7 @@ function OutlinerApp({ user }: { user: User }) {
 
             {/* 開始日フィルター */}
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5" title="開始日">
-              <span className="text-[9px] text-gray-400 px-0.5 font-medium select-none">開始日</span>
+              <span className="text-[9px] text-gray-400 px-1.5 font-medium select-none">開始日</span>
               {([
                 { key: 'START_TODAY',    icon: <CalendarDays size={13} />,   title: '開始: 今日' },
                 { key: 'START_TOMORROW', icon: <CalendarCheck2 size={13} />, title: '開始: 明日' },
@@ -844,7 +844,7 @@ function OutlinerApp({ user }: { user: User }) {
 
             {/* 終了日フィルター */}
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5" title="終了日">
-              <span className="text-[9px] text-gray-400 px-0.5 font-medium select-none">終了日</span>
+              <span className="text-[9px] text-gray-400 px-1.5 font-medium select-none">終了日</span>
               {([
                 { key: 'END_TODAY',    icon: <CalendarDays size={13} />,   title: '終了: 今日' },
                 { key: 'END_TOMORROW', icon: <CalendarCheck2 size={13} />, title: '終了: 明日' },
