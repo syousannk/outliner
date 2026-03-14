@@ -444,18 +444,14 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                 placeholder="タスクを入力"
                 className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                   ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                  ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                  transition-colors duration-1000 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
               />
-              {/* 取り消し線: spanはinputの幅計算に使った透明テキストと同じ構造 */}
+              {/* 取り消し線のみ */}
               {strikeState && (
                 <div className="pointer-events-none absolute inset-0 flex items-center px-1" aria-hidden>
                   <span className={`relative whitespace-pre ${TEXT_CLASS} ${LEADING_CLASS}`} style={{ color: 'transparent' }}>
                     {node.text || '\u00A0'}
                     {strikeLine}
-                  </span>
-                  {/* グレーテキスト層: inputと全く同じ absolute inset-0 */}
-                  <span className={`absolute inset-0 px-1 whitespace-pre overflow-hidden ${TEXT_CLASS} ${LEADING_CLASS} text-gray-400 ${grayTextClass}`}>
-                    {node.text || '\u00A0'}
                   </span>
                 </div>
               )}
@@ -516,21 +512,14 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                     style={{ resize: 'none', overflow: 'hidden' }}
                     className={`w-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                      ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                      transition-colors duration-1000 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
-                  {/* 取り消し線 + グレーテキスト層
-                      textareaは高さが可変のため absolute inset-0 ではなくtextarea自体に重ねる。
-                      同じpx-1・同じフォントクラスで重ねることでズレをなくす */}
+                  {/* 取り消し線のみ */}
                   {strikeState && (
                     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-                      {/* 取り消し線: textareaと同じpaddingでテキスト幅に合わせる */}
-                      <div className={`px-1 ${TEXT_CLASS} ${LEADING_CLASS} whitespace-pre-wrap break-all`} style={{ color: 'transparent' }}>
+                      <div className={`px-1 ${TEXT_CLASS} ${LEADING_CLASS} whitespace-pre-wrap break-all relative`} style={{ color: 'transparent' }}>
                         {node.text || '\u00A0'}
-                        <span className={`strike-line ${strikeState}`} style={{ top: '0.6em', transform: 'none', marginTop: 0 }} />
-                      </div>
-                      {/* グレーテキスト層: textareaと全く同じスタイル */}
-                      <div className={`absolute inset-0 px-1 ${TEXT_CLASS} ${LEADING_CLASS} whitespace-pre-wrap break-all overflow-hidden text-gray-400 ${grayTextClass}`}>
-                        {node.text || '\u00A0'}
+                        {strikeLine}
                       </div>
                     </div>
                   )}

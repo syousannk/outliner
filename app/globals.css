@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 取り消し線: clip-pathで左→右に現れる / 右→左に消える */
 @keyframes reveal-ltr {
   from { clip-path: inset(0 100% 0 0); }
   to   { clip-path: inset(0 0%   0 0); }
@@ -12,23 +11,11 @@
   to   { clip-path: inset(0 100% 0 0); }
 }
 
-/* 文字色: グレー層を右→左に消す（取り消し時: グレー→黒） */
-@keyframes gray-hide-rtl {
-  from { clip-path: inset(0 0%   0 0); }
-  to   { clip-path: inset(0 100% 0 0); }
-}
-
-/* 文字色: グレー層を左→右に現す（完了時: 黒→グレー） */
-@keyframes gray-show-ltr {
-  from { clip-path: inset(0 100% 0 0); }
-  to   { clip-path: inset(0 0%   0 0); }
-}
-
+/* 取り消し線 */
 .strike-line {
   display: block;
   position: absolute;
   left: 0; right: 0;
-  /* テキストの中央: 行の中心にくるよう top/transform で配置 */
   top: 50%;
   transform: translateY(-50%);
   height: 1.5px;
@@ -39,16 +26,20 @@
 .strike-line.done { clip-path: inset(0 0% 0 0); animation: none; }
 .strike-line.out  { animation: hide-rtl   1s ease-out forwards; }
 
-/* グレーテキスト層 (完了時: 左→右に現れる) */
-.gray-text-in {
-  animation: gray-show-ltr 1s ease-out forwards;
+/* テキスト色アニメーション: inputとtextarea自体に直接適用 */
+/* 完了時: 黒→グレーに左から右へ (グレー色が左→右に広がる) */
+.text-to-gray {
+  animation: text-color-to-gray 1s ease-out forwards;
 }
-/* グレーテキスト層 (完了済み静止) */
-.gray-text-done {
-  clip-path: inset(0 0% 0 0);
-  animation: none;
+/* 取り消し時: グレー→黒に右から左へ (黒色が右→左に広がる) */
+.text-to-black {
+  animation: text-color-to-black 1s ease-out forwards;
 }
-/* グレーテキスト層 (取り消し時: 右→左に消える) */
-.gray-text-out {
-  animation: gray-hide-rtl 1s ease-out forwards;
-}
+
+/* 
+  テキスト色のclip-pathアニメーション:
+  2つのレイヤー（黒・グレー）をclip-pathで分割して見せる
+  → これはinputに直接適用できないため、
+     input自体は color を固定し、
+     上から白背景のマスクを動かす方式を使う
+*/
