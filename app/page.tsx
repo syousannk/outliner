@@ -20,9 +20,9 @@ interface NodesMap { [key: string]: OutlineNode | { id: string; children: string
 interface ToastItem { id: string; nodeId: string; nodeText: string; snapshot: NodesMap; timer: ReturnType<typeof setTimeout>; remaining: number; startTime: number; }
 
 // 固定スタイル定数
-const TEXT_CLASS = 'text-[15px] sm:text-base';
-const LEADING_CLASS = 'leading-6';
-const PY_CLASS = 'py-1.5';
+const TEXT_CLASS = 'text-sm';
+const LEADING_CLASS = 'leading-5';
+const PY_CLASS = 'py-1';
 // 日付エリアの固定幅（全階層で右端を揃える）
 const DATE_W = 'w-[270px]';
 
@@ -327,22 +327,24 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     onDeleteRequest(id, snapshot);
   };
 
-  const handleCalendarIconClick = () => { setTimeout(() => startDateRef.current?.showPicker?.(), 50); };
-  const handleStartDateClick = () => { setTimeout(() => startDateRef.current?.showPicker?.(), 50); };
-  const handleEndDateClick = () => { setTimeout(() => endDateRef.current?.showPicker?.(), 50); };
+  // showPicker() を使うとブラウザによってカレンダーが画面左上に表示される
+  // → 通常の input クリック（ブラウザデフォルト）に任せる
+  const handleCalendarIconClick = () => { startDateRef.current?.click(); };
 
-  const calendarVisibilityClass = hasDates || isFocused || selfHovered
-    ? 'opacity-100'
-    : 'opacity-30 sm:opacity-0 transition-opacity duration-150';
+  // 日付エリアの表示: 日付あり → 常時、なし → ホバー/フォーカス時のみ
+  const showDateArea = hasDates || isFocused || selfHovered;
+  // リーダー線の表示: 日付ありまたはホバー/フォーカス時のみ（日付なし・非ホバー時は非表示）
+  const showLeaderLine = hasDates || isFocused || selfHovered;
+  // スマホでは日付なしでも薄く常時表示
+  const dateAreaClass = showDateArea ? 'opacity-100' : 'opacity-0 sm:opacity-0';
 
   // 日付エリア（PC・スマホ共通）
   const dateArea = (
-    <div className={`flex items-center gap-1 ${calendarVisibilityClass}`}>
+    <div className={`flex items-center gap-1 transition-opacity duration-150 ${dateAreaClass}`}>
       <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
         <Calendar className="w-3 h-3 text-gray-400 ml-1.5 cursor-pointer flex-shrink-0" onClick={handleCalendarIconClick} />
         <input ref={startDateRef} type="date" value={node.startDate}
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
-          onClick={handleStartDateClick}
           className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.startDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
           title="開始日" />
         {node.startDate && (
@@ -354,7 +356,6 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
         <input ref={endDateRef} type="date" value={node.endDate} min={node.startDate}
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
-          onClick={handleEndDateClick}
           className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.endDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
           title="終了日" />
         {node.endDate && (
@@ -366,11 +367,11 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   );
 
   // 取り消し線オーバーレイ
-  // visibility:hidden で要素のレイアウトサイズを維持しつつ非表示
-  // → 親の color (text-gray-400) が currentColor として strike-line に継承される
+  // opacity:0 でテキストを非表示にしつつ、span のサイズ・位置を保持する
+  // strike-line の background-color は globals.css で gray-400 固定色を指定
   const strikeOverlay = (inline: boolean) => strikeState ? (
-    <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden text-gray-400" aria-hidden>
-      <span style={{ visibility: 'hidden' }} className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS}`}>
+    <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden" aria-hidden>
+      <span style={{ opacity: 0 }} className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS}`}>
         {node.text || '\u00A0'}
         <span className={`strike-line ${strikeState}`} />
       </span>
@@ -428,8 +429,13 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
               {strikeOverlay(false)}
             </div>
 
-            {/* リーダー線 */}
-            <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mx-2 min-w-[12px]" />
+            {/* リーダー線: 日付あり or ホバー/フォーカス時のみ表示 */}
+            {showLeaderLine && (
+              <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mx-2 min-w-[12px]" />
+            )}
+            {!showLeaderLine && (
+              <div className="flex-1 mx-2 min-w-[12px]" />
+            )}
 
             {/* 日付エリア：固定幅で全階層の右端を揃える */}
             <div className={`flex-shrink-0 ${DATE_W} flex justify-start transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
