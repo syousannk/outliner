@@ -635,16 +635,17 @@ function OutlinerApp({ user }: { user: User }) {
       JSON.stringify(state.nodes) !== JSON.stringify(prev.nodes) ||
       title !== prev.title ||
       fontSize !== prev.fontSize ||
-      filterMode !== prev.filterMode
+      filterMode !== prev.filterMode ||
+      lineSpacing !== prev.lineSpacing
     ) {
-      prevDataRef.current = { nodes: state.nodes, title, fontSize, filterMode };
+      prevDataRef.current = { nodes: state.nodes, title, fontSize, filterMode, lineSpacing };
       setDoc(
         doc(db, 'artifacts', APP_ID, 'users', user.uid, 'outline', 'main'),
-        { nodes: state.nodes, title, fontSize, filterMode },
+        { nodes: state.nodes, title, fontSize, filterMode, lineSpacing },
         { merge: true }
       );
     }
-  }, [state.nodes, title, fontSize, filterMode, user, isLoaded]);
+  }, [state.nodes, title, fontSize, filterMode, lineSpacing, user, isLoaded]);
 
   const handleDeleteRequest = useCallback((nodeId: string, snapshot: NodesMap) => {
     const node = snapshot[nodeId] as OutlineNode;
