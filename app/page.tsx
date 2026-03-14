@@ -385,31 +385,46 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   );
 
   // 取り消し線アニメーション
-  // 元テキスト（黒/グレー）はそのまま表示し、その上にグレーテキストをclip-pathで重ねる
-  // 完了時: グレーテキスト層が左→右にスライドして覆う + 線が伸びる
-  // 取消時: グレーテキスト層が右→左に消えて黒テキストが現れる + 線が縮む
   const strikeOverlay = (inline: boolean) => {
     if (!strikeState) return null;
-    // グレーテキスト層を input/textarea と全く同じ位置・スタイルで重ねる
-    // flex items-center は使わず absolute inset-0 + px-1 のみ（inputと同じ）
     const animStyle: React.CSSProperties =
       strikeState === 'in'   ? { animation: 'reveal-ltr 1s ease-out forwards', color: '#9ca3af' } :
       strikeState === 'done' ? { clipPath: 'inset(0 0% 0 0)', animation: 'none', color: '#9ca3af' } :
-      /* out */                { animation: 'hide-rtl 1s ease-out forwards',   color: '#9ca3af' };
+      /* out */                { animation: 'hide-rtl 1s ease-out forwards', color: '#9ca3af' };
+
+    if (inline) {
+      // スマホ: textareaは自動伸縮するためabsolute inset-0だと高さが合わない
+      // flex items-center で垂直中央に揃えた上でテキストを重ねる
+      return (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute inset-0 flex items-center px-1">
+            <span className={"relative " + TEXT_CLASS + " " + LEADING_CLASS + " whitespace-pre-wrap break-all"}
+              style={{ color: "transparent" }}>
+              {node.text || " "}
+              <span className={"strike-line " + strikeState} />
+            </span>
+          </div>
+          <div className={"absolute inset-0 flex items-center px-1 overflow-hidden " + TEXT_CLASS + " " + LEADING_CLASS + " whitespace-pre-wrap break-all"}
+            style={animStyle}>
+            {node.text || " "}
+          </div>
+        </div>
+      );
+    }
+
+    // PC: input は absolute inset-0 なので同じ配置で重ねる
     return (
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-        {/* 取り消し線 */}
-        <span className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS} px-1`}
-          style={{ color: 'transparent' }}>
-          {node.text || '\u00A0'}
-          <span className={`strike-line ${strikeState}`} />
+        <span className={"relative whitespace-pre " + TEXT_CLASS + " " + LEADING_CLASS + " px-1"}
+          style={{ color: "transparent" }}>
+          {node.text || " "}
+          <span className={"strike-line " + strikeState} />
         </span>
-        {/* グレーテキスト: inputと同じ absolute inset-0 で重ねる */}
         <span
-          className={`absolute inset-0 px-1 pointer-events-none overflow-hidden ${TEXT_CLASS} ${LEADING_CLASS} ${inline ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'}`}
+          className={"absolute inset-0 px-1 overflow-hidden whitespace-pre " + TEXT_CLASS + " " + LEADING_CLASS}
           style={animStyle}
         >
-          {node.text || '\u00A0'}
+          {node.text || " "}
         </span>
       </div>
     );
@@ -532,8 +547,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
               </button>
             </div>
 
-            {/* 2行目: 日付 */}
-            <div className={`mt-0.5 transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''}`}>
+            {/* 2行目: 日付 - 日付がある場合は下に余白を追加 */}
+            <div className={`mt-0.5 transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''} ${hasDates ? 'pb-2' : ''}`}>
               {dateArea}
             </div>
           </div>
