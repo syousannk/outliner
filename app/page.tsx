@@ -384,23 +384,34 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     </div>
   );
 
-  // 取り消し線 + テキスト色オーバーレイ（同じclip-pathアニメーションで同期）
-  const strikeOverlay = (inline: boolean) => strikeState ? (
-    <div className="pointer-events-none absolute inset-0 flex items-center overflow-hidden" aria-hidden>
-      <span
-        style={{ color: 'transparent' }}
-        className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS} px-1`}
-      >
-        {node.text || '\u00A0'}
-        <span className={`strike-line ${strikeState}`} />
-      </span>
-      {/* テキスト色オーバーレイ: 取り消し線と同じ方向・速度で色を変える */}
-      <span className={`${strikeState === 'out' ? 'text-restore-overlay' : 'text-dim-overlay'} ${inline ? 'whitespace-pre-wrap break-all' : ''}`}
-        style={strikeState === 'done' ? { clipPath: 'inset(0 0% 0 0)', animation: 'none' } : {}}>
-        {node.text || '\u00A0'}
-      </span>
-    </div>
-  ) : null;
+  // 取り消し線アニメーション
+  // 元テキスト（黒/グレー）はそのまま表示し、その上にグレーテキストをclip-pathで重ねる
+  // 完了時: グレーテキスト層が左→右にスライドして覆う + 線が伸びる
+  // 取消時: グレーテキスト層が右→左に消えて黒テキストが現れる + 線が縮む
+  const strikeOverlay = (inline: boolean) => {
+    if (!strikeState) return null;
+    const spanClass = `absolute inset-0 flex items-center px-1 pointer-events-none overflow-hidden ${TEXT_CLASS} ${LEADING_CLASS} ${inline ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'}`;
+    const animStyle: React.CSSProperties =
+      strikeState === 'in'   ? { animation: 'reveal-ltr 1s ease-out forwards', color: '#9ca3af' } :
+      strikeState === 'done' ? { clipPath: 'inset(0 0% 0 0)', animation: 'none', color: '#9ca3af' } :
+      /* out */                { animation: 'hide-rtl 1s ease-out forwards',   color: '#9ca3af' };
+    return (
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        {/* 取り消し線（テキストの幅に追従するspanの中に入れる） */}
+        <div className="relative px-1">
+          <span className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS}`}
+            style={{ color: 'transparent' }}>
+            {node.text || '\u00A0'}
+            <span className={`strike-line ${strikeState}`} />
+          </span>
+        </div>
+        {/* グレーテキスト: clip-pathで元テキストを上書きしながらスライド */}
+        <span className={spanClass} style={animStyle}>
+          {node.text || '\u00A0'}
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div className="mb-0.5">
@@ -448,7 +459,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                 placeholder="タスクを入力"
                 className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                   ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                  ${strikeState ? 'text-transparent' : node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                  ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
               />
               {strikeOverlay(false)}
             </div>
@@ -508,7 +519,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                     style={{ resize: 'none', overflow: 'hidden' }}
                     className={`w-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                      ${strikeState ? 'text-transparent' : node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                      ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
                   {strikeOverlay(true)}
                 </div>

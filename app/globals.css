@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 取り消し線はclip-pathで表示/非表示を制御
-   完了時: 右端から左端へclipが広がる（線が左→右に現れる）
-   取消時: 左端から右端へclipが広がる（線が右→左に消える）
-*/
 @keyframes reveal-ltr {
   from { clip-path: inset(0 100% 0 0); }
   to   { clip-path: inset(0 0%   0 0); }
@@ -17,44 +13,12 @@
 
 .strike-line {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  margin-top: -1px;
+  left: 0; right: 0;
+  top: 50%; margin-top: -1px;
   height: 1.5px;
   background-color: #9ca3af;
   pointer-events: none;
 }
-
 .strike-line.in   { animation: reveal-ltr 1s ease-out forwards; }
 .strike-line.done { clip-path: inset(0 0% 0 0); animation: none; }
-.strike-line.out  { animation: hide-rtl  1s ease-out forwards; }
-
-/* テキスト色変化: 取り消し線と同じclip-pathで同期 */
-/* 完了時: グレー文字が左→右に現れる */
-.text-dim-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  padding: 0 4px;
-  color: #9ca3af;
-  pointer-events: none;
-  overflow: hidden;
-  white-space: pre;
-  animation: reveal-ltr 1s ease-out forwards;
-}
-/* 取り消し時: グレー文字が右→左に消える（黒文字が現れる） */
-.text-restore-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  padding: 0 4px;
-  color: #9ca3af;
-  pointer-events: none;
-  overflow: hidden;
-  white-space: pre;
-  clip-path: inset(0 0% 0 0);
-  animation: hide-rtl 1s ease-out forwards;
-}
+.strike-line.out  { animation: hide-rtl   1s ease-out forwards; }
