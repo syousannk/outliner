@@ -792,7 +792,7 @@ function OutlinerApp({ user }: { user: User }) {
 
           {/* 1行目：アイコン ＋ 検索バー ＋ メール ＋ ログアウト */}
           <div className="flex items-center gap-2">
-            <img src="/icon-192.png" alt="Outliner" className="w-7 h-7 rounded-lg border border-gray-200 flex-shrink-0 ml-0.5" />
+            <img src="/icon-192.png" alt="Outliner" className="w-[29px] h-[29px] rounded-lg border border-gray-200 flex-shrink-0 ml-0.5" />
             <div className="flex-1 flex items-center bg-gray-100 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-gray-300 transition-shadow">
               <Search className="w-3.5 h-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
               <input type="text" placeholder="検索..." className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
