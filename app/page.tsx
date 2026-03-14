@@ -448,7 +448,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                 placeholder="タスクを入力"
                 className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                   ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                  ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                  ${strikeState ? 'text-transparent' : node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
               />
               {strikeOverlay(false)}
             </div>
@@ -508,7 +508,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                     style={{ resize: 'none', overflow: 'hidden' }}
                     className={`w-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                      ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                      ${strikeState ? 'text-transparent' : node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
                   {strikeOverlay(true)}
                 </div>
