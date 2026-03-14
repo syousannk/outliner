@@ -49,6 +49,7 @@ type Action =
   | { type: 'UPDATE_DATES'; id: string; field: 'startDate' | 'endDate'; value: string }
   | { type: 'TOGGLE_COLLAPSE'; id: string }
   | { type: 'ADD_NODE'; afterId?: string; isRoot?: boolean }
+  | { type: 'ADD_NODE_BEFORE'; beforeId: string }
   | { type: 'INDENT'; id: string } | { type: 'UNINDENT'; id: string }
   | { type: 'DELETE'; id: string } | { type: 'MOVE_UP'; id: string } | { type: 'MOVE_DOWN'; id: string }
   | { type: 'SET_FOCUS'; id: string } | { type: 'TOGGLE_COMPLETE'; id: string }
@@ -82,6 +83,12 @@ function reducer(state: State, action: Action): State {
         const parentId = (nodes[afterId] as OutlineNode).parent; newNode.parent = parentId; nodes[newNode.id] = newNode;
         const parent = clone(parentId); parent.children.splice(parent.children.indexOf(afterId) + 1, 0, newNode.id);
       }
+      return { ...state, nodes, focusId: newNode.id };
+    }
+    case 'ADD_NODE_BEFORE': {
+      const { beforeId } = action; const newNode = createNode();
+      const parentId = (nodes[beforeId] as OutlineNode).parent; newNode.parent = parentId; nodes[newNode.id] = newNode;
+      const parent = clone(parentId); parent.children.splice(parent.children.indexOf(beforeId), 0, newNode.id);
       return { ...state, nodes, focusId: newNode.id };
     }
     case 'INDENT': {
@@ -259,6 +266,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         if (inputRef.current) {
           const len = inputRef.current.value.length;
           inputRef.current.setSelectionRange(len, len);
+          inputRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
       }, 0);
     }
@@ -277,7 +285,16 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.nativeEvent.isComposing) return;
     if (e.key === 'Tab') { e.preventDefault(); dispatch({ type: e.shiftKey ? 'UNINDENT' : 'INDENT', id }); }
-    else if (e.key === 'Enter') { e.preventDefault(); dispatch({ type: 'ADD_NODE', afterId: id }); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      const pos = (e.target as HTMLInputElement).selectionStart ?? 0;
+      if (pos === 0 && node.text.length > 0) {
+        // カーソルが先頭かつテキストあり → 上に追加
+        dispatch({ type: 'ADD_NODE_BEFORE', beforeId: id });
+      } else {
+        dispatch({ type: 'ADD_NODE', afterId: id });
+      }
+    }
     else if (e.key === 'Backspace' && node.text === '' && inputRef.current?.selectionStart === 0) { e.preventDefault(); dispatch({ type: 'DELETE', id }); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); dispatch({ type: 'MOVE_UP', id }); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); dispatch({ type: 'MOVE_DOWN', id }); }
