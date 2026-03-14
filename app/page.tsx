@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useReducer, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Circle, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, List, CircleDot, CircleCheck } from 'lucide-react';
+import { Circle, Search, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, List, CircleDot, CircleCheck } from 'lucide-react';
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged, User, updateProfile,
@@ -270,11 +270,11 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     prevCompleted.current = node.isCompleted;
     if (node.isCompleted) {
       setStrikeState('in');
-      const t = setTimeout(() => setStrikeState('done'), 300);
+      const t = setTimeout(() => setStrikeState('done'), 500);
       return () => clearTimeout(t);
     } else {
       setStrikeState('out');
-      const t = setTimeout(() => setStrikeState(null), 300);
+      const t = setTimeout(() => setStrikeState(null), 500);
       return () => clearTimeout(t);
     }
   }, [node.isCompleted]);
@@ -328,9 +328,6 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   };
 
   // showPicker() でカレンダーを開く
-  const handleCalendarIconClick = () => {
-    try { startDateRef.current?.showPicker?.(); } catch { startDateRef.current?.click(); }
-  };
 
   // 日付エリアの表示: 日付あり → 常時、なし → ホバー/フォーカス時のみ
   const showDateArea = hasDates || isFocused || selfHovered;
@@ -343,10 +340,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const dateArea = (
     <div className={`flex items-center gap-1 transition-opacity duration-150 ${dateAreaClass}`}>
       <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
-        <Calendar className="w-3 h-3 text-gray-400 ml-1.5 cursor-pointer flex-shrink-0" onClick={handleCalendarIconClick} />
         <input ref={startDateRef} type="date" value={node.startDate}
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
-          className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.startDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
+          className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.startDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
           title="開始日" />
         {node.startDate && (
           <button onClick={() => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' })}
@@ -357,7 +353,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
         <input ref={endDateRef} type="date" value={node.endDate} min={node.startDate}
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
-          className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.endDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
+          className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.endDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
           title="終了日" />
         {node.endDate && (
           <button onClick={() => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' })}
@@ -394,7 +390,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         <div className="flex flex-col flex-shrink-0 w-7">
           <button
             onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
-            className={`w-5 mx-1 ${PY_CLASS} flex items-center justify-center transition-opacity ${node.isCompleted ? 'opacity-40' : ''}`}
+            className={`w-5 mx-1 ${PY_CLASS} flex items-center justify-center transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''}`}
             title={node.isCompleted ? '未完了にする' : '完了にする'}
           >
             {node.isCompleted
@@ -416,7 +412,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             onMouseLeave={() => setSelfHovered(false)}
           >
             {/* テキスト（幅可変・inline-block サイズ計算） */}
-            <div className={`relative flex-shrink overflow-hidden min-w-[20px] transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
+            <div className={`relative flex-shrink overflow-hidden min-w-[20px] transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''}`}>
               {/* 幅計算用スペーサー：PY_CLASS + テキストクラスでバレットと高さを揃える */}
               <span className={`invisible whitespace-pre block px-1 ${PY_CLASS} ${TEXT_CLASS} ${LEADING_CLASS} pointer-events-none`}>
                 {node.text || 'タスクを入力'}
@@ -430,7 +426,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                 placeholder="タスクを入力"
                 className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                   ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                  ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                  transition-colors duration-500 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
               />
               {strikeOverlay(false)}
             </div>
@@ -444,7 +440,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             )}
 
             {/* 日付エリア：固定幅で全階層の右端を揃える */}
-            <div className={`flex-shrink-0 ${DATE_W} flex justify-start transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
+            <div className={`flex-shrink-0 ${DATE_W} flex justify-start transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''}`}>
               {dateArea}
             </div>
 
@@ -463,7 +459,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
           >
             {/* 1行目: テキスト + ゴミ箱 */}
             <div className="flex items-center">
-              <div className={`flex-1 min-w-0 transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
+              <div className={`flex-1 min-w-0 transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''}`}>
                 <div className="relative">
                   <textarea
                     ref={mobileInputRef}
@@ -490,7 +486,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                     style={{ resize: 'none', overflow: 'hidden' }}
                     className={`w-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                      ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                      transition-colors duration-500 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
                   {strikeOverlay(true)}
                 </div>
@@ -502,7 +498,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             </div>
 
             {/* 2行目: 日付 */}
-            <div className={`mt-0.5 transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
+            <div className={`mt-0.5 transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''}`}>
               {dateArea}
             </div>
           </div>
