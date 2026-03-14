@@ -481,12 +481,12 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             type="date"
             value={node.startDate}
             onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
-            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            className="absolute inset-0 opacity-0 w-full h-full pointer-events-none"
             style={{ fontSize: '16px' }}
           />
         </div>
         <button
-          onClick={() => node.startDate && dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' })}
+          onPointerDown={(e: React.PointerEvent) => { e.stopPropagation(); if (node.startDate) dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' }); }}
           className={`text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none px-0.5 ${node.startDate ? 'visible' : 'invisible'}`}>×</button>
       </div>
       <span className="text-gray-300 flex-shrink-0">→</span>
@@ -505,12 +505,12 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             value={node.endDate}
             min={node.startDate}
             onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
-            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            className="absolute inset-0 opacity-0 w-full h-full pointer-events-none"
             style={{ fontSize: '16px' }}
           />
         </div>
         <button
-          onClick={() => node.endDate && dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' })}
+          onPointerDown={(e: React.PointerEvent) => { e.stopPropagation(); if (node.endDate) dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' }); }}
           className={`text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none px-0.5 ${node.endDate ? 'visible' : 'invisible'}`}>×</button>
       </div>
     </div>
