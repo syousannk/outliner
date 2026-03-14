@@ -297,6 +297,14 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     }
   }, [node.isCompleted]);
 
+  // textareaの高さを自動調整（初期表示・テキスト変更時）
+  useEffect(() => {
+    const el = mobileInputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }, [node.text]);
+
   useEffect(() => {
     if (focusId !== id) return;
     const isMobile = window.innerWidth < 640;
@@ -349,11 +357,17 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
 
   // 日付エリアの表示: 日付あり → 常時、なし → ホバー/フォーカス時のみ
   const showDateArea = hasDates || isFocused || selfHovered;
-  // スマホ: 日付なしでも opacity-30 で薄く常時表示
   // PC: ホバー/フォーカス/日付あり時のみ表示
-  const dateAreaClass = hasDates || isFocused || selfHovered
+  // スマホ: selfHoveredに依存せず、日付あり=100%、日付なし=常にopacity-30表示
+  const dateAreaClass = hasDates
     ? 'opacity-100'
-    : 'opacity-30 sm:opacity-0';
+    : isFocused || selfHovered
+      ? 'opacity-100'
+      : 'opacity-0 sm:opacity-0'; // この値はスマホ用CSSで上書き
+  // スマホ専用: 日付なしでも opacity-30 で常時表示（sm:以上は非表示）
+  const mobileAlwaysShowClass = !hasDates && !isFocused && !selfHovered
+    ? 'opacity-30 sm:!opacity-0'
+    : 'opacity-100';
 
   // 日付エリア（PC・スマホ共通）
   // ×ボタンは常時レンダリング（日付なし時は invisible）して幅を確保しズレを防ぐ
@@ -536,9 +550,11 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
               </button>
             </div>
 
-            {/* 2行目: 日付 - 常に余白を確保、日付ありの場合は下も余白 */}
+            {/* 2行目: 日付 - スマホでは日付なしでも薄く常時表示 */}
             <div className={`mt-1 transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''} ${hasDates ? 'pb-3' : 'pb-1'}`}>
-              {dateArea}
+              <div className={`transition-opacity duration-150 ${mobileAlwaysShowClass}`}>
+                {dateArea}
+              </div>
             </div>
           </div>
 
