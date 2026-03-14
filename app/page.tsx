@@ -912,16 +912,16 @@ function OutlinerApp({ user }: { user: User }) {
             {/* タスク状態フィルター */}
             <div className="flex items-center bg-gray-100 p-0.5 sm:p-1 rounded-lg gap-0.5">
               <button onClick={() => setFilterMode('ALL')} title="すべて"
-                className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-md transition-all ${filterMode === 'ALL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
-                <List className="w-4 h-4 sm:w-6 sm:h-6" />
+                className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'ALL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                <List className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button onClick={() => setFilterMode('ACTIVE')} title="未完了"
-                className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-md transition-all ${filterMode === 'ACTIVE' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
-                <CircleDot className="w-4 h-4 sm:w-6 sm:h-6" />
+                className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'ACTIVE' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                <CircleDot className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button onClick={() => setFilterMode('COMPLETED')} title="完了済み"
-                className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-md transition-all ${filterMode === 'COMPLETED' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
-                <CircleCheck className="w-4 h-4 sm:w-6 sm:h-6" />
+                className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'COMPLETED' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                <CircleCheck className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
 
@@ -929,14 +929,14 @@ function OutlinerApp({ user }: { user: User }) {
             <div className="flex items-center bg-gray-100 p-0.5 sm:p-1 rounded-lg gap-0.5" title="開始日">
               <span className="hidden sm:inline text-[9px] text-gray-400 px-1.5 font-medium select-none">開始日</span>
               {([
-                { key: 'START_TODAY',    icon: <CalendarDays className="w-4 h-4 sm:w-6 sm:h-6" />,   title: '開始: 今日' },
-                { key: 'START_TOMORROW', icon: <CalendarCheck2 className="w-4 h-4 sm:w-6 sm:h-6" />, title: '開始: 明日' },
-                { key: 'START_OVERDUE',  icon: <CalendarX2 className="w-4 h-4 sm:w-6 sm:h-6" />,    title: '開始: 期限切れ' },
+                { key: 'START_TODAY',    icon: <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5" />,   title: '開始: 今日' },
+                { key: 'START_TOMORROW', icon: <CalendarCheck2 className="w-4 h-4 sm:w-5 sm:h-5" />, title: '開始: 明日' },
+                { key: 'START_OVERDUE',  icon: <CalendarX2 className="w-4 h-4 sm:w-5 sm:h-5" />,    title: '開始: 期限切れ' },
               ] as const).map(({ key, icon, title }) => (
                 <button key={key}
                   onClick={() => setFilterMode(filterMode === key ? 'ALL' : key)}
                   title={title}
-                  className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                  className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
                   {icon}
                 </button>
               ))}
@@ -946,14 +946,14 @@ function OutlinerApp({ user }: { user: User }) {
             <div className="flex items-center bg-gray-100 p-0.5 sm:p-1 rounded-lg gap-0.5" title="終了日">
               <span className="hidden sm:inline text-[9px] text-gray-400 px-1.5 font-medium select-none">終了日</span>
               {([
-                { key: 'END_TODAY',    icon: <CalendarDays className="w-4 h-4 sm:w-6 sm:h-6" />,   title: '終了: 今日' },
-                { key: 'END_TOMORROW', icon: <CalendarCheck2 className="w-4 h-4 sm:w-6 sm:h-6" />, title: '終了: 明日' },
-                { key: 'END_OVERDUE',  icon: <CalendarX2 className="w-4 h-4 sm:w-6 sm:h-6" />,    title: '終了: 期限切れ' },
+                { key: 'END_TODAY',    icon: <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5" />,   title: '終了: 今日' },
+                { key: 'END_TOMORROW', icon: <CalendarCheck2 className="w-4 h-4 sm:w-5 sm:h-5" />, title: '終了: 明日' },
+                { key: 'END_OVERDUE',  icon: <CalendarX2 className="w-4 h-4 sm:w-5 sm:h-5" />,    title: '終了: 期限切れ' },
               ] as const).map(({ key, icon, title }) => (
                 <button key={key}
                   onClick={() => setFilterMode(filterMode === key ? 'ALL' : key)}
                   title={title}
-                  className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                  className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
                   {icon}
                 </button>
               ))}
