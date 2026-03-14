@@ -22,9 +22,9 @@ interface ToastItem { id: string; nodeId: string; nodeText: string; snapshot: No
 
 // フォントサイズごとのクラス定義（テキスト + 行間）
 const fontConfig: Record<FontSize, { text: string; leading: string; py: string }> = {
-  sm:  { text: 'text-sm',                  leading: 'leading-5',  py: 'py-0.5' },
-  md:  { text: 'text-[15px] sm:text-base', leading: 'leading-6',  py: 'py-1'   },
-  lg:  { text: 'text-lg sm:text-xl',       leading: 'leading-8',  py: 'py-1.5' },
+  sm:  { text: 'text-sm',                  leading: 'leading-5',  py: 'py-1'   },
+  md:  { text: 'text-[15px] sm:text-base', leading: 'leading-6',  py: 'py-1.5' },
+  lg:  { text: 'text-lg sm:text-xl',       leading: 'leading-8',  py: 'py-2'   },
 };
 
 const createNode = (overrides: Partial<OutlineNode> = {}): OutlineNode => ({
@@ -258,6 +258,24 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const startDateRef = useRef<HTMLInputElement>(null);
   const endDateRef = useRef<HTMLInputElement>(null);
   const [selfHovered, setSelfHovered] = useState(false);
+  // 取り消し線の状態: 'completed' | 'uncompleting' | null
+  const [strikeState, setStrikeState] = useState<'completed' | 'uncompleting' | null>(
+    node.isCompleted ? 'completed' : null
+  );
+  const prevCompleted = useRef(node.isCompleted);
+
+  // isCompletedの変化を検知してアニメーション状態を切り替える
+  useEffect(() => {
+    if (node.isCompleted === prevCompleted.current) return;
+    prevCompleted.current = node.isCompleted;
+    if (node.isCompleted) {
+      setStrikeState('completed');
+    } else {
+      setStrikeState('uncompleting');
+      const t = setTimeout(() => setStrikeState(null), 300);
+      return () => clearTimeout(t);
+    }
+  }, [node.isCompleted]);
 
   useEffect(() => {
     if (focusId !== id) return;
@@ -417,7 +435,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
 
               {/* スマホ: textarea */}
               <div className="sm:hidden">
-                <div className="relative inline-block w-full">
+                <div className="relative">
                   <textarea
                     ref={mobileInputRef}
                     value={node.text}
@@ -445,10 +463,10 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                       ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
-                  {/* 取り消し線アニメーション（スマホ） */}
-                  {node.isCompleted && (
-                    <div className="strike-animate pointer-events-none absolute inset-0 px-1 text-gray-400 overflow-hidden" aria-hidden>
-                      <span className={`${textClass} ${leadingClass} invisible whitespace-pre-wrap`}>{node.text}</span>
+                  {/* 取り消し線：テキスト幅に合わせた span で描画 */}
+                  {strikeState && (
+                    <div className={`pointer-events-none absolute inset-0 px-1 ${textClass} ${leadingClass} text-gray-400 overflow-hidden flex items-center`} aria-hidden>
+                      <span className={`strike-wrap ${strikeState} whitespace-pre-wrap break-words`}>{node.text || '\u00A0'}</span>
                     </div>
                   )}
                 </div>
@@ -471,10 +489,10 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                       ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
-                  {/* 取り消し線アニメーション（PC） */}
-                  {node.isCompleted && (
-                    <div className="strike-animate pointer-events-none absolute inset-0 flex items-center px-1 text-gray-400 overflow-hidden" aria-hidden>
-                      <span className="invisible whitespace-pre">{node.text}</span>
+                  {/* 取り消し線（PC） */}
+                  {strikeState && (
+                    <div className={`pointer-events-none absolute inset-0 flex items-center px-1 text-gray-400 overflow-hidden`} aria-hidden>
+                      <span className={`strike-wrap ${strikeState} whitespace-pre`}>{node.text || '\u00A0'}</span>
                     </div>
                   )}
                 </div>
