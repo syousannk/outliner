@@ -2,45 +2,88 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 取り消し線: 左→右に伸びる（完了時） */
-@keyframes strike-in {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
+/* ── 取り消し線アニメーション ────────────────────── */
+
+/* 完了時: 左から右に width が伸びる */
+@keyframes strike-grow {
+  from { width: 0%; }
+  to   { width: 100%; }
 }
 
-/* 取り消し線: 右→左に縮む（取り消し時） */
-@keyframes strike-out {
-  from { transform: scaleX(1); }
-  to   { transform: scaleX(0); }
+/* 取り消し時: 右から左に width が縮む */
+@keyframes strike-shrink {
+  from { width: 100%; }
+  to   { width: 0%; }
 }
 
+/* 完了時: 黒→グレーに文字色フェード（左→右マスクで見せる） */
+@keyframes text-dim {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+
+/* 取り消し時: グレー→黒に文字色フェード（右→左マスクで見せる） */
+@keyframes text-restore {
+  from { clip-path: inset(0 0% 0 0); }
+  to   { clip-path: inset(0 100% 0 0); }
+}
+
+/* ベース */
 .strike-line {
-  display: block;
   position: absolute;
-  left: 0;
-  right: 0;
   top: 50%;
   margin-top: -1px;
   height: 1.5px;
   background-color: #9ca3af; /* gray-400 */
 }
 
-/* 完了時: transform-origin を左端にして左→右 */
+/* 完了時: 左端から右に伸びる */
 .strike-line.in {
-  transform-origin: left center;
-  transform: scaleX(0);
-  animation: strike-in 0.5s ease-out forwards;
+  left: 0;
+  width: 0%;
+  animation: strike-grow 0.5s ease-out forwards;
 }
 
-/* 完了済み静止 */
+/* 完了済み静止: 全幅を維持 */
 .strike-line.done {
-  transform-origin: left center;
-  transform: scaleX(1);
+  left: 0;
+  width: 100%;
 }
 
-/* 取り消し時: transform-origin を右端にして右→左 */
+/* 取り消し時: 右端から左に縮む */
 .strike-line.out {
-  transform-origin: right center;
-  transform: scaleX(1);
-  animation: strike-out 0.5s ease-out forwards;
+  right: 0;
+  left: auto;
+  width: 100%;
+  animation: strike-shrink 0.5s ease-out forwards;
+}
+
+/* 文字色オーバーレイ: グレー色のコピーを左→右にフェードイン（完了時） */
+.text-dim-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  color: #9ca3af; /* gray-400 */
+  pointer-events: none;
+  white-space: pre;
+  overflow: hidden;
+  clip-path: inset(0 100% 0 0);
+  animation: text-dim 0.5s ease-out forwards;
+}
+
+/* 文字色オーバーレイ: 黒色のコピーを右→左にフェードイン（取り消し時） */
+.text-restore-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  color: #111827; /* gray-900 */
+  pointer-events: none;
+  white-space: pre;
+  overflow: hidden;
+  clip-path: inset(0 0% 0 0);
+  animation: text-restore 0.5s ease-out forwards;
 }

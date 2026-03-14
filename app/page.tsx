@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useReducer, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Circle, Search, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, List, CircleDot, CircleCheck } from 'lucide-react';
+import { Circle, Search, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, List, CircleDot, CircleCheck, CalendarDays, CalendarCheck2, CalendarX2 } from 'lucide-react';
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged, User, updateProfile,
@@ -384,21 +384,36 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     </div>
   );
 
-  // 取り消し線オーバーレイ
-  // テキストを color:transparent にしてスペーサーとし、
-  // その上に strike-line（absolute）だけを表示する。
-  // 文字色のアニメーションは input/textarea の transition-colors duration-500 に完全に任せる。
-  const strikeOverlay = (inline: boolean) => strikeState ? (
-    <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden" aria-hidden>
-      <span
-        style={{ color: 'transparent' }}
-        className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS}`}
-      >
-        {node.text || '\u00A0'}
-        <span className={`strike-line ${strikeState}`} />
-      </span>
-    </div>
-  ) : null;
+  // 取り消し線 + 文字色オーバーレイ
+  // strike-line: width アニメーションで左→右（完了）/ 右→左（取り消し）
+  // text overlay: clip-path アニメーションでグレー文字が左→右に現れる（完了）
+  //               黒文字が右→左に現れる（取り消し）
+  const strikeOverlay = (inline: boolean) => {
+    if (!strikeState) return null;
+    const wrapClass = `relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS}`;
+    return (
+      <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden" aria-hidden>
+        {/* スペーサー: テキストの幅/高さを確保（透明） */}
+        <span style={{ color: 'transparent' }} className={wrapClass}>
+          {node.text || '\u00A0'}
+          {/* 取り消し線 */}
+          <span className={`strike-line ${strikeState}`} />
+        </span>
+        {/* 文字色オーバーレイ: 完了時はグレー文字、取り消し時は黒文字をアニメーション */}
+        {(strikeState === 'in' || strikeState === 'done') && (
+          <span className={`${strikeState === 'in' ? 'text-dim-overlay' : 'text-dim-overlay'} ${inline ? 'whitespace-pre-wrap break-all' : ''}`}
+            style={strikeState === 'done' ? { clipPath: 'inset(0 0% 0 0)', animation: 'none' } : {}}>
+            {node.text || '\u00A0'}
+          </span>
+        )}
+        {strikeState === 'out' && (
+          <span className={`text-restore-overlay ${inline ? 'whitespace-pre-wrap break-all' : ''}`}>
+            {node.text || '\u00A0'}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="mb-0.5">
@@ -707,33 +722,35 @@ function OutlinerApp({ user }: { user: User }) {
             </div>
 
             {/* 開始日フィルター */}
-            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5">
-              <span className="text-[10px] text-gray-400 px-1 font-medium">開始</span>
+            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5" title="開始日">
+              <span className="text-[9px] text-gray-400 px-0.5 font-medium select-none">開</span>
               {([
-                { key: 'START_TODAY',    label: '今日' },
-                { key: 'START_TOMORROW', label: '明日' },
-                { key: 'START_OVERDUE',  label: '期限切れ' },
-              ] as const).map(({ key, label }) => (
+                { key: 'START_TODAY',    icon: <CalendarDays size={13} />,   title: '開始: 今日' },
+                { key: 'START_TOMORROW', icon: <CalendarCheck2 size={13} />, title: '開始: 明日' },
+                { key: 'START_OVERDUE',  icon: <CalendarX2 size={13} />,    title: '開始: 期限切れ' },
+              ] as const).map(({ key, icon, title }) => (
                 <button key={key}
                   onClick={() => setFilterMode(filterMode === key ? 'ALL' : key)}
-                  className={`px-2 py-1 text-xs font-medium rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                  {label}
+                  title={title}
+                  className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                  {icon}
                 </button>
               ))}
             </div>
 
             {/* 終了日フィルター */}
-            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5">
-              <span className="text-[10px] text-gray-400 px-1 font-medium">終了</span>
+            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5" title="終了日">
+              <span className="text-[9px] text-gray-400 px-0.5 font-medium select-none">終</span>
               {([
-                { key: 'END_TODAY',    label: '今日' },
-                { key: 'END_TOMORROW', label: '明日' },
-                { key: 'END_OVERDUE',  label: '期限切れ' },
-              ] as const).map(({ key, label }) => (
+                { key: 'END_TODAY',    icon: <CalendarDays size={13} />,   title: '終了: 今日' },
+                { key: 'END_TOMORROW', icon: <CalendarCheck2 size={13} />, title: '終了: 明日' },
+                { key: 'END_OVERDUE',  icon: <CalendarX2 size={13} />,    title: '終了: 期限切れ' },
+              ] as const).map(({ key, icon, title }) => (
                 <button key={key}
                   onClick={() => setFilterMode(filterMode === key ? 'ALL' : key)}
-                  className={`px-2 py-1 text-xs font-medium rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                  {label}
+                  title={title}
+                  className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                  {icon}
                 </button>
               ))}
             </div>
