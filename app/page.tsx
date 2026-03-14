@@ -380,132 +380,146 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   );
 
   return (
-    <div className="flex flex-col relative">
-      {/* 行部分のみにホバーを適用 */}
-      <div
-        className={`flex flex-col sm:flex-row sm:items-center ${pyClass} gap-0.5`}
-        onMouseEnter={() => setSelfHovered(true)}
-        onMouseLeave={() => setSelfHovered(false)}
-      >
-        {/* 1行目：バレット・テキスト・(PC時は日付・ゴミ箱もここ) */}
-        <div className="flex items-start flex-1 min-w-0">
+    /* 外側: 全体を「バレット列 ｜ コンテンツ列」の横並びにする */
+    <div className="flex flex-row">
 
-          {/* 完了トグル ＋ バレット */}
-          <div className="relative flex-shrink-0 self-start">
-            <button
-              onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
-              className="relative w-5 h-5 mx-1 mt-0.5 flex items-center justify-center transition-colors"
-              title={node.isCompleted ? '未完了にする' : '完了にする'}
-            >
-              {node.isCompleted ? (
-                <CheckCircle size={16} className="text-gray-400" />
-              ) : (
-                <Circle size={16} className="text-gray-400" />
-              )}
+      {/* ── バレット列 ──
+          縦線は「バレットボタンの下」から「子コンテナの終わり」まで描く。
+          バレットボタン(w-5=20px) + mx-1(左右4px) → 列幅 28px、中心=14px */}
+      <div className="flex flex-col flex-shrink-0 w-7">
+        {/* バレットボタン */}
+        <button
+          onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
+          className={`w-5 h-5 mx-1 mt-0.5 flex items-center justify-center transition-colors flex-shrink-0 ${node.isCompleted ? 'opacity-40' : ''}`}
+          title={node.isCompleted ? '未完了にする' : '完了にする'}
+        >
+          {node.isCompleted
+            ? <CheckCircle size={16} className="text-gray-400" />
+            : <Circle size={16} className="text-gray-400" />}
+        </button>
+        {/* 縦線：バレット直下から子コンテナの高さ分だけ伸びる */}
+        {isExpanded && hasChildren && (
+          <div className="flex-1 border-l border-gray-200 ml-[10px]" />
+        )}
+      </div>
+
+      {/* ── コンテンツ列 ── */}
+      <div className="flex-1 min-w-0">
+        {/* 行本体（ホバー管理） */}
+        <div
+          className={`flex flex-col sm:flex-row sm:items-center ${pyClass} gap-0.5`}
+          onMouseEnter={() => setSelfHovered(true)}
+          onMouseLeave={() => setSelfHovered(false)}
+        >
+          {/* 1行目：テキスト ＋ (PC時は日付・ゴミ箱) */}
+          <div className="flex items-start flex-1 min-w-0">
+            <div className={`flex-1 min-w-0 transition-all duration-300 ${node.isCompleted ? 'opacity-40 grayscale' : 'opacity-100'}`}>
+
+              {/* スマホ: textarea */}
+              <div className="sm:hidden">
+                <div className="relative inline-block w-full">
+                  <textarea
+                    ref={mobileInputRef}
+                    value={node.text}
+                    rows={1}
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val.includes('\n')) {
+                        const pos = e.target.selectionStart - 1;
+                        const textBefore = val.slice(0, val.indexOf('\n'));
+                        if (pos === 0 && node.text.length > 0) {
+                          dispatch({ type: 'ADD_NODE_BEFORE', beforeId: id });
+                        } else {
+                          dispatch({ type: 'UPDATE_TEXT', id, text: textBefore });
+                          dispatch({ type: 'ADD_NODE', afterId: id });
+                        }
+                        return;
+                      }
+                      dispatch({ type: 'UPDATE_TEXT', id, text: val });
+                    }}
+                    onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
+                    onKeyDown={handleKeyDown}
+                    placeholder="タスクを入力"
+                    style={{ resize: 'none', overflow: 'hidden' }}
+                    className={`w-full bg-transparent outline-none px-1 ${textClass} ${leadingClass} transition-colors duration-300
+                      ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
+                      ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                  />
+                  {/* 取り消し線アニメーション（スマホ） */}
+                  {node.isCompleted && (
+                    <div className="strike-animate pointer-events-none absolute inset-0 px-1 text-gray-400 overflow-hidden" aria-hidden>
+                      <span className={`${textClass} ${leadingClass} invisible whitespace-pre-wrap`}>{node.text}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* PC: 幅可変input ＋ リーダー線 ＋ 日付 ＋ ゴミ箱 */}
+              <div className="hidden sm:flex sm:flex-row sm:items-center">
+                <div className="relative flex-shrink overflow-hidden min-w-[20px]">
+                  <span className={`invisible whitespace-pre block px-1 ${pyClass} ${textClass} ${leadingClass} pointer-events-none`}>
+                    {node.text || 'タスクを入力'}
+                  </span>
+                  <input
+                    ref={desktopInputRef}
+                    value={node.text}
+                    onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
+                    onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
+                    onKeyDown={handleKeyDown}
+                    placeholder="タスクを入力"
+                    className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${textClass} ${leadingClass} transition-colors duration-300
+                      ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
+                      ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                  />
+                  {/* 取り消し線アニメーション（PC） */}
+                  {node.isCompleted && (
+                    <div className="strike-animate pointer-events-none absolute inset-0 flex items-center px-1 text-gray-400 overflow-hidden" aria-hidden>
+                      <span className="invisible whitespace-pre">{node.text}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mx-2 min-w-[12px]" />
+                {dateArea}
+                <button onClick={handleDeleteClick} title="削除"
+                  className={`flex-shrink-0 ml-1.5 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors ${selfHovered ? 'opacity-100' : 'opacity-0'}`}>
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            </div>
+
+            {/* スマホ: ゴミ箱 */}
+            <button onClick={handleDeleteClick} title="削除"
+              className="sm:hidden flex-shrink-0 ml-1 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors">
+              <Trash2 size={13} />
             </button>
           </div>
 
-          {/* テキスト入力
-              スマホ: 折り返しあり（whitespace-normal, textarea的に高さ可変）
-              PC:     1行・リーダー線あり */}
-          <div className={`flex-1 min-w-0 transition-all duration-300 ${node.isCompleted ? 'opacity-40 grayscale' : 'opacity-100'}`}>
-
-            {/* スマホ: textareaで改行を確実に検知 */}
-            <div className="sm:hidden">
-              <textarea
-                ref={mobileInputRef}
-                value={node.text}
-                rows={1}
-                onChange={e => {
-                  const val = e.target.value;
-                  // 改行文字が含まれたら新規タスク追加
-                  if (val.includes('\n')) {
-                    const pos = e.target.selectionStart - 1; // 改行前のカーソル位置
-                    const textBefore = val.slice(0, val.indexOf('\n'));
-                    if (pos === 0 && node.text.length > 0) {
-                      // 先頭で改行 → 上に追加（テキストは現状維持）
-                      dispatch({ type: 'ADD_NODE_BEFORE', beforeId: id });
-                    } else {
-                      // 通常改行 → 下に追加
-                      dispatch({ type: 'UPDATE_TEXT', id, text: textBefore });
-                      dispatch({ type: 'ADD_NODE', afterId: id });
-                    }
-                    return;
-                  }
-                  dispatch({ type: 'UPDATE_TEXT', id, text: val });
-                }}
-                onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
-                onKeyDown={handleKeyDown}
-                placeholder="タスクを入力"
-                style={{ resize: 'none', overflow: 'hidden' }}
-                className={`w-full bg-transparent outline-none px-1 ${textClass} ${leadingClass} transition-colors duration-300
-                  ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                  ${node.isCompleted ? 'text-gray-500 line-through' : ''}`}
-              />
-            </div>
-
-            {/* PC: テキスト幅可変 ＋ リーダー線 ＋ 日付 ＋ ゴミ箱 */}
-            <div className="hidden sm:flex sm:flex-row sm:items-center">
-              <div className="relative flex-shrink overflow-hidden min-w-[20px]">
-                <span className={`invisible whitespace-pre block px-1 ${pyClass} ${textClass} ${leadingClass} pointer-events-none`}>
-                  {node.text || 'タスクを入力'}
-                </span>
-                <input
-                  ref={desktopInputRef}
-                  value={node.text}
-                  onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
-                  onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
-                  onKeyDown={handleKeyDown}
-                  placeholder="タスクを入力"
-                  className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${textClass} ${leadingClass} transition-colors duration-300
-                    ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                    ${node.isCompleted ? 'text-gray-500 line-through' : 'text-gray-900'}`}
-                />
-              </div>
-              {/* リーダー線 */}
-              <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mx-2 min-w-[12px]" />
-              {/* PC: 日付をここに表示 */}
-              {dateArea}
-              {/* ゴミ箱 */}
-              <button onClick={handleDeleteClick} title="削除"
-                className={`flex-shrink-0 ml-1.5 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors ${selfHovered ? 'opacity-100' : 'opacity-0'}`}>
-                <Trash2 size={13} />
-              </button>
-            </div>
+          {/* スマホ: 2行目に日付 */}
+          <div className="sm:hidden">
+            {dateArea}
           </div>
-
-          {/* スマホ: ゴミ箱（1行目の右端） */}
-          <button onClick={handleDeleteClick} title="削除"
-            className="sm:hidden flex-shrink-0 ml-1 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors">
-            <Trash2 size={13} />
-          </button>
         </div>
 
-        {/* スマホ: 2行目に日付を表示（バレット幅分インデント） */}
-        <div className="sm:hidden pl-7">
-          {dateArea}
-        </div>
+        {/* 子ノード */}
+        {isExpanded && hasChildren && (
+          <div>
+            {node.children.map((childId: string) => (
+              <TreeItem
+                key={childId}
+                id={childId}
+                nodes={nodes}
+                dispatch={dispatch}
+                focusId={focusId}
+                matched={matched}
+                isFiltering={isFiltering}
+                searchQuery={searchQuery}
+                fontSize={fontSize}
+                onDeleteRequest={onDeleteRequest}
+              />
+            ))}
+          </div>
+        )}
       </div>
-
-      {/* 子ノード：バレット中心(14px)から縦線を出す */}
-      {isExpanded && hasChildren && (
-        <div className="relative ml-[14px] pl-3 border-l border-gray-200">
-          {node.children.map((childId: string) => (
-            <TreeItem
-              key={childId}
-              id={childId}
-              nodes={nodes}
-              dispatch={dispatch}
-              focusId={focusId}
-              matched={matched}
-              isFiltering={isFiltering}
-              searchQuery={searchQuery}
-              fontSize={fontSize}
-              onDeleteRequest={onDeleteRequest}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 });
