@@ -446,30 +446,42 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   // ×ボタンは常時レンダリング（日付なし時は invisible）して幅を確保しズレを防ぐ
   const dateArea = (
     <div className="flex items-center gap-1">
-      <div className="flex items-center bg-gray-100 rounded-md border border-gray-200 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
+      {/* 開始日 */}
+      <div className="relative flex items-center bg-gray-100 rounded-md border border-gray-200 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
         <input ref={startDateRef} type="date" value={node.startDate}
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
           className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors
-            ${!node.startDate ? 'text-gray-500' : 'text-gray-600'}
-            ${node.isCompleted && node.startDate ? 'line-through decoration-gray-400' : ''}`}
+            ${!node.startDate ? 'text-gray-500' : 'text-gray-600'}`}
           title="開始日" />
         <button
           onClick={() => node.startDate && dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' })}
           className={`px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ${node.startDate ? 'visible' : 'invisible'}`}
           title="開始日を削除">×</button>
+        {/* 完了時の取り消し線 */}
+        {node.isCompleted && node.startDate && (
+          <div className="pointer-events-none absolute inset-0 flex items-center px-2">
+            <div className="w-full h-px bg-gray-400" />
+          </div>
+        )}
       </div>
       <span className="text-gray-300 text-xs flex-shrink-0">–</span>
-      <div className="flex items-center bg-gray-100 rounded-md border border-gray-200 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
+      {/* 終了日 */}
+      <div className="relative flex items-center bg-gray-100 rounded-md border border-gray-200 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
         <input ref={endDateRef} type="date" value={node.endDate} min={node.startDate}
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
           className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors
-            ${!node.endDate ? 'text-gray-500' : 'text-gray-600'}
-            ${node.isCompleted && node.endDate ? 'line-through decoration-gray-400' : ''}`}
+            ${!node.endDate ? 'text-gray-500' : 'text-gray-600'}`}
           title="終了日" />
         <button
           onClick={() => node.endDate && dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' })}
           className={`px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ${node.endDate ? 'visible' : 'invisible'}`}
           title="終了日を削除">×</button>
+        {/* 完了時の取り消し線 */}
+        {node.isCompleted && node.endDate && (
+          <div className="pointer-events-none absolute inset-0 flex items-center px-2">
+            <div className="w-full h-px bg-gray-400" />
+          </div>
+        )}
       </div>
     </div>
   );
