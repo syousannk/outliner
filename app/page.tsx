@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useReducer, useEffect, useRef, useMemo, useCallback } from 'react';
-import { ChevronRight, ChevronDown, Circle, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, Type } from 'lucide-react';
+import { Circle, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw } from 'lucide-react';
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged, User, updateProfile,
@@ -389,12 +389,6 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       >
         {/* 1行目：折りたたみ・バレット・テキスト・(PC時は日付・ゴミ箱もここ) */}
         <div className="flex items-center flex-1 min-w-0">
-
-          {/* 折りたたみアイコン */}
-          <div className="w-5 h-5 flex flex-shrink-0 items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded cursor-pointer transition-colors"
-            onClick={() => hasChildren && dispatch({ type: 'TOGGLE_COLLAPSE', id })}>
-            {hasChildren ? (node.isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />) : null}
-          </div>
 
           {/* 完了トグル ＋ バレット */}
           <button
