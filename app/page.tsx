@@ -349,10 +349,11 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
 
   // 日付エリアの表示: 日付あり → 常時、なし → ホバー/フォーカス時のみ
   const showDateArea = hasDates || isFocused || selfHovered;
-  // リーダー線の表示: 日付ありまたはホバー/フォーカス時のみ（日付なし・非ホバー時は非表示）
-  const showLeaderLine = hasDates || isFocused || selfHovered;
-  // スマホでは日付なしでも薄く常時表示
-  const dateAreaClass = showDateArea ? 'opacity-100' : 'opacity-0 sm:opacity-0';
+  // スマホ: 日付なしでも opacity-30 で薄く常時表示
+  // PC: ホバー/フォーカス/日付あり時のみ表示
+  const dateAreaClass = hasDates || isFocused || selfHovered
+    ? 'opacity-100'
+    : 'opacity-30 sm:opacity-0';
 
   // 日付エリア（PC・スマホ共通）
   // ×ボタンは常時レンダリング（日付なし時は invisible）して幅を確保しズレを防ぐ
@@ -458,10 +459,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             </div>
 
             {/* リーダー線: 日付あり or ホバー/フォーカス時のみ表示 */}
-            {showLeaderLine && (
+            {(hasDates || isFocused || selfHovered) ? (
               <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mx-2 min-w-[12px]" />
-            )}
-            {!showLeaderLine && (
+            ) : (
               <div className="flex-1 mx-2 min-w-[12px]" />
             )}
 
@@ -504,6 +504,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                         }
                         return;
                       }
+                      // 高さを自動調整
+                      e.target.style.height = 'auto';
+                      e.target.style.height = e.target.scrollHeight + 'px';
                       dispatch({ type: 'UPDATE_TEXT', id, text: val });
                     }}
                     onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
@@ -514,13 +517,15 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                       transition-colors duration-1000 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
-                  {/* 取り消し線のみ */}
+                  {/* 取り消し線: textareaの実際の高さに追従するため、
+                      transparent divをtextareaと同じサイズで重ねて中央に線を引く */}
                   {strikeState && (
-                    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-                      <div className={`px-1 ${TEXT_CLASS} ${LEADING_CLASS} whitespace-pre-wrap break-all relative`} style={{ color: 'transparent' }}>
+                    <div className="pointer-events-none absolute inset-0 flex items-center overflow-hidden" aria-hidden>
+                      <span className={`w-full px-1 ${TEXT_CLASS} ${LEADING_CLASS} whitespace-pre-wrap break-words relative`}
+                        style={{ color: 'transparent', wordBreak: 'break-all' }}>
                         {node.text || '\u00A0'}
                         {strikeLine}
-                      </div>
+                      </span>
                     </div>
                   )}
                 </div>
@@ -531,8 +536,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
               </button>
             </div>
 
-            {/* 2行目: 日付 - 日付がある場合は下に余白を追加 */}
-            <div className={`mt-0.5 transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''} ${hasDates ? 'pb-2' : ''}`}>
+            {/* 2行目: 日付 - 常に余白を確保、日付ありの場合は下も余白 */}
+            <div className={`mt-1 transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''} ${hasDates ? 'pb-3' : 'pb-1'}`}>
               {dateArea}
             </div>
           </div>
