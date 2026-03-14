@@ -385,22 +385,17 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   );
 
   // 取り消し線アニメーション
-  // 取り消し線のみ。文字色は transition-colors で変化させる。
-  // オーバーレイテキストはズレるため使わない。
-  const strikeOverlay = (inline: boolean) => strikeState ? (
-    <span
-      className={"pointer-events-none absolute inset-0 overflow-hidden " + (inline ? "flex items-start" : "")}
-      aria-hidden
-    >
-      {/* 透明テキストで取り消し線の位置を決める */}
-      <span
-        className={"relative px-1 " + TEXT_CLASS + " " + LEADING_CLASS + " " + (inline ? "whitespace-pre-wrap break-all" : "whitespace-pre")}
-        style={{ color: "transparent" }}
-      >
-        {node.text || "\u00A0"}
-        <span className={"strike-line " + strikeState} />
-      </span>
-    </span>
+  // 取り消し線 + グレーテキスト層
+  // グレーテキスト層はinputと同じスタイルで上に重ねる
+  // PC(input): absolute inset-0 なので同じクラスで合う
+  // スマホ(textarea): 同じクラスで重ねると高さが合わないので、
+  //   グレー層も textarea と全く同じ style で配置する
+  const grayTextClass = strikeState === 'in'   ? 'gray-text-in'   :
+                        strikeState === 'done'  ? 'gray-text-done' :
+                        strikeState === 'out'   ? 'gray-text-out'  : '';
+
+  const strikeLine = strikeState ? (
+    <span className={"strike-line " + strikeState} />
   ) : null;
 
   return (
@@ -449,9 +444,21 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                 placeholder="タスクを入力"
                 className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                   ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                  transition-colors duration-1000 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                  ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
               />
-              {strikeOverlay(false)}
+              {/* 取り消し線: spanはinputの幅計算に使った透明テキストと同じ構造 */}
+              {strikeState && (
+                <div className="pointer-events-none absolute inset-0 flex items-center px-1" aria-hidden>
+                  <span className={`relative whitespace-pre ${TEXT_CLASS} ${LEADING_CLASS}`} style={{ color: 'transparent' }}>
+                    {node.text || '\u00A0'}
+                    {strikeLine}
+                  </span>
+                  {/* グレーテキスト層: inputと全く同じ absolute inset-0 */}
+                  <span className={`absolute inset-0 px-1 whitespace-pre overflow-hidden ${TEXT_CLASS} ${LEADING_CLASS} text-gray-400 ${grayTextClass}`}>
+                    {node.text || '\u00A0'}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* リーダー線: 日付あり or ホバー/フォーカス時のみ表示 */}
@@ -509,9 +516,24 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                     style={{ resize: 'none', overflow: 'hidden' }}
                     className={`w-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                      transition-colors duration-1000 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                      ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
-                  {strikeOverlay(true)}
+                  {/* 取り消し線 + グレーテキスト層
+                      textareaは高さが可変のため absolute inset-0 ではなくtextarea自体に重ねる。
+                      同じpx-1・同じフォントクラスで重ねることでズレをなくす */}
+                  {strikeState && (
+                    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+                      {/* 取り消し線: textareaと同じpaddingでテキスト幅に合わせる */}
+                      <div className={`px-1 ${TEXT_CLASS} ${LEADING_CLASS} whitespace-pre-wrap break-all`} style={{ color: 'transparent' }}>
+                        {node.text || '\u00A0'}
+                        <span className={`strike-line ${strikeState}`} style={{ top: '0.6em', transform: 'none', marginTop: 0 }} />
+                      </div>
+                      {/* グレーテキスト層: textareaと全く同じスタイル */}
+                      <div className={`absolute inset-0 px-1 ${TEXT_CLASS} ${LEADING_CLASS} whitespace-pre-wrap break-all overflow-hidden text-gray-400 ${grayTextClass}`}>
+                        {node.text || '\u00A0'}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <button onClick={handleDeleteClick} title="削除"

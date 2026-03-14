@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 取り消し線: clip-pathで左→右に現れる / 右→左に消える */
 @keyframes reveal-ltr {
   from { clip-path: inset(0 100% 0 0); }
   to   { clip-path: inset(0 0%   0 0); }
@@ -11,10 +12,25 @@
   to   { clip-path: inset(0 100% 0 0); }
 }
 
+/* 文字色: グレー層を右→左に消す（取り消し時: グレー→黒） */
+@keyframes gray-hide-rtl {
+  from { clip-path: inset(0 0%   0 0); }
+  to   { clip-path: inset(0 100% 0 0); }
+}
+
+/* 文字色: グレー層を左→右に現す（完了時: 黒→グレー） */
+@keyframes gray-show-ltr {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0%   0 0); }
+}
+
 .strike-line {
+  display: block;
   position: absolute;
   left: 0; right: 0;
-  top: 50%; margin-top: -1px;
+  /* テキストの中央: 行の中心にくるよう top/transform で配置 */
+  top: 50%;
+  transform: translateY(-50%);
   height: 1.5px;
   background-color: #9ca3af;
   pointer-events: none;
@@ -22,3 +38,17 @@
 .strike-line.in   { animation: reveal-ltr 1s ease-out forwards; }
 .strike-line.done { clip-path: inset(0 0% 0 0); animation: none; }
 .strike-line.out  { animation: hide-rtl   1s ease-out forwards; }
+
+/* グレーテキスト層 (完了時: 左→右に現れる) */
+.gray-text-in {
+  animation: gray-show-ltr 1s ease-out forwards;
+}
+/* グレーテキスト層 (完了済み静止) */
+.gray-text-done {
+  clip-path: inset(0 0% 0 0);
+  animation: none;
+}
+/* グレーテキスト層 (取り消し時: 右→左に消える) */
+.gray-text-out {
+  animation: gray-hide-rtl 1s ease-out forwards;
+}
