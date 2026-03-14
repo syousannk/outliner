@@ -468,43 +468,76 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const mobileDateArea = (
     <div className="flex items-center gap-1 text-xs">
       <span className="text-gray-400 flex-shrink-0">開始</span>
-      <div className="relative">
+      <div className="flex items-center">
+        <div className="relative">
+          <button
+            className={`min-w-[28px] text-center ${node.startDate ? 'text-gray-600' : 'text-gray-300'} hover:text-gray-800 transition-colors`}
+            onClick={() => mobileStartDateRef.current?.showPicker?.()}
+          >
+            {node.startDate ? formatDateShort(node.startDate) : '+'}
+          </button>
+          <input
+            ref={mobileStartDateRef}
+            type="date"
+            value={node.startDate}
+            onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
+            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            style={{ fontSize: '16px' }}
+          />
+        </div>
         <button
-          className={`${node.startDate ? 'text-gray-600' : 'text-gray-400'} hover:text-gray-800 transition-colors`}
-          onClick={() => mobileStartDateRef.current?.showPicker?.()}
-        >
-          {node.startDate ? formatDateShort(node.startDate) : '未設定'}
-        </button>
-        <input
-          ref={mobileStartDateRef}
-          type="date"
-          value={node.startDate}
-          onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
-          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-          style={{ fontSize: '16px' }}
-        />
+          onClick={() => node.startDate && dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' })}
+          className={`text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none px-0.5 ${node.startDate ? 'visible' : 'invisible'}`}>×</button>
       </div>
       <span className="text-gray-300 flex-shrink-0">→</span>
       <span className="text-gray-400 flex-shrink-0">終了</span>
-      <div className="relative">
+      <div className="flex items-center">
+        <div className="relative">
+          <button
+            className={`min-w-[28px] text-center ${node.endDate ? 'text-gray-600' : 'text-gray-300'} hover:text-gray-800 transition-colors`}
+            onClick={() => mobileEndDateRef.current?.showPicker?.()}
+          >
+            {node.endDate ? formatDateShort(node.endDate) : '+'}
+          </button>
+          <input
+            ref={mobileEndDateRef}
+            type="date"
+            value={node.endDate}
+            min={node.startDate}
+            onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
+            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            style={{ fontSize: '16px' }}
+          />
+        </div>
         <button
-          className={`${node.endDate ? 'text-gray-600' : 'text-gray-400'} hover:text-gray-800 transition-colors`}
-          onClick={() => mobileEndDateRef.current?.showPicker?.()}
-        >
-          {node.endDate ? formatDateShort(node.endDate) : '未設定'}
-        </button>
-        <input
-          ref={mobileEndDateRef}
-          type="date"
-          value={node.endDate}
-          min={node.startDate}
-          onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
-          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-          style={{ fontSize: '16px' }}
-        />
+          onClick={() => node.endDate && dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' })}
+          className={`text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none px-0.5 ${node.endDate ? 'visible' : 'invisible'}`}>×</button>
       </div>
     </div>
   );
+
+  // タッチドラッグハンドラ
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    onDragStart(id);
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const handle = e.currentTarget as HTMLElement;
+    handle.style.pointerEvents = 'none';
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    handle.style.pointerEvents = '';
+    if (el) {
+      const item = el.closest('[data-tree-id]') as HTMLElement | null;
+      if (item?.dataset.treeId) onDragOver(item.dataset.treeId);
+    }
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    if (dragOverId && dragOverId !== id) onDrop(dragOverId);
+    else onDragEnd();
+  };
 
   return (
     <div className="mb-0.5">
@@ -514,6 +547,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       )}
       <div
         className={`flex flex-row ${draggingId === id ? 'opacity-50' : ''}`}
+        data-tree-id={id}
         draggable
         onDragStart={e => { e.stopPropagation(); onDragStart(id); }}
         onDragOver={e => { e.preventDefault(); e.stopPropagation(); onDragOver(id); }}
@@ -521,15 +555,23 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         onDrop={e => { e.preventDefault(); e.stopPropagation(); onDrop(id); }}
       >
 
+        {/* ドラッグハンドル（全画面・左端） */}
+        <div
+          className={`flex-shrink-0 flex items-start justify-center w-4 pt-1 cursor-grab active:cursor-grabbing transition-opacity select-none
+            opacity-25 hover:opacity-60 sm:opacity-0 ${selfHovered ? 'sm:opacity-30' : ''}`}
+          style={{ touchAction: 'none' }}
+          title="ドラッグして並び替え"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <GripVertical size={14} className="text-gray-400" />
+        </div>
+
         {/* バレット列
             ・バレットボタン自身に PY_CLASS を持たせてコンテンツ行と高さを揃える
             ・縦線は flex-1 でボタン直下〜子ノードコンテナ末端まで伸びる */}
         <div className="flex flex-col flex-shrink-0 w-7">
-          {/* ドラッグハンドル（PCのみ・ホバー時表示） */}
-          <div className={`hidden sm:flex items-center justify-center w-4 h-full cursor-grab active:cursor-grabbing transition-opacity ${selfHovered ? 'opacity-40 hover:opacity-80' : 'opacity-0'}`}
-            style={{ position: 'absolute', marginLeft: '-16px' }}>
-            <GripVertical size={14} className="text-gray-400" />
-          </div>
           <button
             onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
             className={`w-5 mx-1 ${PY_CLASS} flex items-center justify-center transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''}`}
