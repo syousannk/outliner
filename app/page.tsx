@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useReducer, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Circle, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw } from 'lucide-react';
+import { Circle, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, AlignJustify } from 'lucide-react';
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged, User, updateProfile,
@@ -18,6 +18,7 @@ interface OutlineNode {
 }
 interface NodesMap { [key: string]: OutlineNode | { id: string; children: string[]; parent: null }; }
 type FontSize = 'sm' | 'md' | 'lg';
+type LineSpacing = 'compact' | 'normal' | 'relaxed';
 interface ToastItem { id: string; nodeId: string; nodeText: string; snapshot: NodesMap; timer: ReturnType<typeof setTimeout>; remaining: number; startTime: number; }
 
 // フォントサイズごとのクラス定義（テキスト + 行間）
@@ -25,6 +26,13 @@ const fontConfig: Record<FontSize, { text: string; leading: string; py: string }
   sm:  { text: 'text-sm',                  leading: 'leading-5',  py: 'py-1'   },
   md:  { text: 'text-[15px] sm:text-base', leading: 'leading-6',  py: 'py-1.5' },
   lg:  { text: 'text-lg sm:text-xl',       leading: 'leading-8',  py: 'py-2'   },
+};
+
+// 行間設定（ルートレベルのタスク間マージン）
+const lineSpacingConfig: Record<LineSpacing, string> = {
+  compact: 'mb-0',
+  normal:  'mb-1.5',
+  relaxed: 'mb-4',
 };
 
 const createNode = (overrides: Partial<OutlineNode> = {}): OutlineNode => ({
@@ -248,10 +256,10 @@ function AuthScreen() {
 interface TreeItemProps {
   id: string; nodes: NodesMap; dispatch: React.Dispatch<Action>;
   focusId: string | null; matched: Set<string>; isFiltering: boolean; searchQuery: string;
-  fontSize: FontSize; onDeleteRequest: (id: string, snapshot: NodesMap) => void;
+  fontSize: FontSize; lineSpacing: LineSpacing; onDeleteRequest: (id: string, snapshot: NodesMap) => void;
 }
 
-const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFiltering, searchQuery, fontSize, onDeleteRequest }: TreeItemProps) => {
+const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFiltering, searchQuery, fontSize, lineSpacing, onDeleteRequest }: TreeItemProps) => {
   const node = nodes[id] as OutlineNode;
   const mobileInputRef = useRef<HTMLTextAreaElement>(null);
   const desktopInputRef = useRef<HTMLInputElement>(null);
@@ -397,43 +405,38 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     </div>
   );
 
-  return (
-    /* 外側: 全体を「バレット列 ｜ コンテンツ列」の横並びにする */
-    <div className="flex flex-row">
+  const spacingClass = lineSpacingConfig[lineSpacing];
 
-      {/* ── バレット列 ──
-          縦線は「バレットボタンの下」から「子コンテナの終わり」まで描く。
-          バレットボタン(w-5=20px) + mx-1(左右4px) → 列幅 28px、中心=14px */}
+  return (
+    <div className={`flex flex-row items-start ${spacingClass}`}>
+
+      {/* バレット列 */}
       <div className="flex flex-col flex-shrink-0 w-7">
-        {/* バレットボタン */}
         <button
           onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
-          className={`w-5 h-5 mx-1 mt-0.5 flex items-center justify-center transition-colors flex-shrink-0 ${node.isCompleted ? 'opacity-40' : ''}`}
+          className={`w-5 h-5 mx-1 flex items-center justify-center flex-shrink-0 transition-opacity ${node.isCompleted ? 'opacity-40' : ''}`}
           title={node.isCompleted ? '未完了にする' : '完了にする'}
         >
           {node.isCompleted
             ? <CheckCircle size={16} className="text-gray-400" />
             : <Circle size={16} className="text-gray-400" />}
         </button>
-        {/* 縦線：バレット直下から子コンテナの高さ分だけ伸びる */}
         {isExpanded && hasChildren && (
           <div className="flex-1 border-l border-gray-200 ml-[10px]" />
         )}
       </div>
 
-      {/* ── コンテンツ列 ── */}
+      {/* コンテンツ列 */}
       <div className="flex-1 min-w-0">
-        {/* 行本体（ホバー管理） */}
         <div
           className={`flex flex-col sm:flex-row sm:items-center ${pyClass} gap-0.5`}
           onMouseEnter={() => setSelfHovered(true)}
           onMouseLeave={() => setSelfHovered(false)}
         >
-          {/* 1行目：テキスト ＋ (PC時は日付・ゴミ箱) */}
           <div className="flex items-start flex-1 min-w-0">
-            <div className={`flex-1 min-w-0 transition-all duration-300 ${node.isCompleted ? 'opacity-40 grayscale' : 'opacity-100'}`}>
+            <div className={`flex-1 min-w-0 transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : 'opacity-100'}`}>
 
-              {/* スマホ: textarea */}
+              {/* スマホ */}
               <div className="sm:hidden">
                 <div className="relative">
                   <textarea
@@ -459,20 +462,22 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                     onKeyDown={handleKeyDown}
                     placeholder="タスクを入力"
                     style={{ resize: 'none', overflow: 'hidden' }}
-                    className={`w-full bg-transparent outline-none px-1 ${textClass} ${leadingClass} transition-colors duration-300
+                    className={`w-full bg-transparent outline-none px-1 ${textClass} ${leadingClass}
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                       ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
-                  {/* 取り消し線：テキスト幅に合わせた span で描画 */}
                   {strikeState && (
-                    <div className={`pointer-events-none absolute inset-0 px-1 ${textClass} ${leadingClass} text-gray-400 overflow-hidden flex items-center`} aria-hidden>
-                      <span className={`strike-wrap ${strikeState} whitespace-pre-wrap break-words`}>{node.text || '\u00A0'}</span>
+                    <div className="pointer-events-none absolute inset-0 px-1 overflow-hidden" aria-hidden>
+                      <span className={`relative inline-block invisible ${textClass} ${leadingClass} whitespace-pre-wrap break-all`}>
+                        {node.text || '\u00A0'}
+                        <span className={`strike-line ${strikeState === 'completed' ? 'in' : 'out'}`} />
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* PC: 幅可変input ＋ リーダー線 ＋ 日付 ＋ ゴミ箱 */}
+              {/* PC */}
               <div className="hidden sm:flex sm:flex-row sm:items-center">
                 <div className="relative flex-shrink overflow-hidden min-w-[20px]">
                   <span className={`invisible whitespace-pre block px-1 ${pyClass} ${textClass} ${leadingClass} pointer-events-none`}>
@@ -485,14 +490,16 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                     onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
                     onKeyDown={handleKeyDown}
                     placeholder="タスクを入力"
-                    className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${textClass} ${leadingClass} transition-colors duration-300
+                    className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${textClass} ${leadingClass}
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                       ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
-                  {/* 取り消し線（PC） */}
                   {strikeState && (
-                    <div className={`pointer-events-none absolute inset-0 flex items-center px-1 text-gray-400 overflow-hidden`} aria-hidden>
-                      <span className={`strike-wrap ${strikeState} whitespace-pre`}>{node.text || '\u00A0'}</span>
+                    <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden" aria-hidden>
+                      <span className="relative invisible whitespace-pre">
+                        {node.text || '\u00A0'}
+                        <span className={`strike-line ${strikeState === 'completed' ? 'in' : 'out'}`} />
+                      </span>
                     </div>
                   )}
                 </div>
@@ -505,20 +512,17 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
               </div>
             </div>
 
-            {/* スマホ: ゴミ箱 */}
             <button onClick={handleDeleteClick} title="削除"
               className="sm:hidden flex-shrink-0 ml-1 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors">
               <Trash2 size={13} />
             </button>
           </div>
 
-          {/* スマホ: 2行目に日付 */}
           <div className="sm:hidden">
             {dateArea}
           </div>
         </div>
 
-        {/* 子ノード */}
         {isExpanded && hasChildren && (
           <div>
             {node.children.map((childId: string) => (
@@ -532,6 +536,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                 isFiltering={isFiltering}
                 searchQuery={searchQuery}
                 fontSize={fontSize}
+                lineSpacing={lineSpacing}
                 onDeleteRequest={onDeleteRequest}
               />
             ))}
@@ -590,8 +595,9 @@ function OutlinerApp({ user }: { user: User }) {
   const [title, setTitle] = useState('My Outline');
   const [isLoaded, setIsLoaded] = useState(false);
   const [fontSize, setFontSize] = useState<FontSize>('md');
+  const [lineSpacing, setLineSpacing] = useState<LineSpacing>('normal');
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const prevDataRef = useRef({ nodes: initialState.nodes, title: 'My Outline', fontSize: 'md' as FontSize, filterMode: 'ALL' });
+  const prevDataRef = useRef({ nodes: initialState.nodes, title: 'My Outline', fontSize: 'md' as FontSize, filterMode: 'ALL', lineSpacing: 'normal' as LineSpacing });
 
   // Firestoreからロード（ノード・タイトル・設定）
   useEffect(() => {
@@ -603,6 +609,7 @@ function OutlinerApp({ user }: { user: User }) {
         const rt = d.title || 'My Outline';
         const rf = (d.fontSize as FontSize) || 'md';
         const rm = d.filterMode || 'ALL';
+        const rl = (d.lineSpacing as LineSpacing) || 'normal';
         const prev = prevDataRef.current;
         if (JSON.stringify(rn) !== JSON.stringify(prev.nodes) || rt !== prev.title) {
           dispatch({ type: 'SET_NODES', nodes: rn });
@@ -610,9 +617,10 @@ function OutlinerApp({ user }: { user: User }) {
         }
         if (rf !== prev.fontSize) setFontSize(rf);
         if (rm !== prev.filterMode) setFilterMode(rm);
-        prevDataRef.current = { nodes: rn, title: rt, fontSize: rf, filterMode: rm };
+        if (rl !== prev.lineSpacing) setLineSpacing(rl);
+        prevDataRef.current = { nodes: rn, title: rt, fontSize: rf, filterMode: rm, lineSpacing: rl };
       } else {
-        setDoc(docRef, { nodes: initialNodes, title: 'My Outline', fontSize: 'md', filterMode: 'ALL' });
+        setDoc(docRef, { nodes: initialNodes, title: 'My Outline', fontSize: 'md', filterMode: 'ALL', lineSpacing: 'normal' });
       }
       setIsLoaded(true);
     }, () => setIsLoaded(true));
@@ -697,7 +705,7 @@ function OutlinerApp({ user }: { user: User }) {
             </button>
           </div>
 
-          {/* 2行目：フィルター ＋ 文字サイズ（＋PCはスペーサー） */}
+          {/* 2行目：フィルター ＋ 文字サイズ ＋ 行間 ＋ リロード */}
           <div className="flex items-center gap-2">
             {/* フィルター */}
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg">
@@ -718,6 +726,26 @@ function OutlinerApp({ user }: { user: User }) {
                 </button>
               ))}
             </div>
+
+            {/* 行間 */}
+            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg" title="行間">
+              <AlignJustify className="w-3 h-3 text-gray-400 mx-1" />
+              {(['compact', 'normal', 'relaxed'] as LineSpacing[]).map((s) => (
+                <button key={s} onClick={() => setLineSpacing(s)}
+                  className={`w-6 h-6 text-xs font-medium rounded-md transition-all ${lineSpacing === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  {s === 'compact' ? 'S' : s === 'normal' ? 'M' : 'L'}
+                </button>
+              ))}
+            </div>
+
+            {/* リロード */}
+            <button
+              onClick={() => window.location.reload()}
+              title="再読み込み"
+              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
           </div>
 
         </div>
