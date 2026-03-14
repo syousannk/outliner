@@ -486,8 +486,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
           />
         </div>
         <button
-          onPointerDown={(e: React.PointerEvent) => { e.stopPropagation(); if (node.startDate) dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' }); }}
-          className={`text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none px-0.5 ${node.startDate ? 'visible' : 'invisible'}`}>×</button>
+          type="button"
+          onClick={() => { if (node.startDate) dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' }); }}
+          className={`text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ml-1 p-1 ${node.startDate ? 'visible' : 'invisible'}`}>×</button>
       </div>
       <span className="text-gray-300 flex-shrink-0">→</span>
       <span className="text-gray-400 flex-shrink-0">終了</span>
@@ -510,8 +511,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
           />
         </div>
         <button
-          onPointerDown={(e: React.PointerEvent) => { e.stopPropagation(); if (node.endDate) dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' }); }}
-          className={`text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none px-0.5 ${node.endDate ? 'visible' : 'invisible'}`}>×</button>
+          type="button"
+          onClick={() => { if (node.endDate) dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' }); }}
+          className={`text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ml-1 p-1 ${node.endDate ? 'visible' : 'invisible'}`}>×</button>
       </div>
     </div>
   );
