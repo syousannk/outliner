@@ -43,3 +43,31 @@
      input自体は color を固定し、
      上から白背景のマスクを動かす方式を使う
 */
+
+/* 複数行取り消し線: text-decoration と clip-path を組み合わせ */
+@keyframes strike-text-in {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0%   0 0); }
+}
+@keyframes strike-text-out {
+  from { clip-path: inset(0 0%   0 0); }
+  to   { clip-path: inset(0 100% 0 0); }
+}
+.strike-text-in {
+  text-decoration: line-through;
+  text-decoration-color: #9ca3af;
+  -webkit-text-decoration-color: #9ca3af;
+  animation: strike-text-in 1s ease-out forwards;
+}
+.strike-text-done {
+  text-decoration: line-through;
+  text-decoration-color: #9ca3af;
+  -webkit-text-decoration-color: #9ca3af;
+  clip-path: inset(0 0% 0 0);
+}
+.strike-text-out {
+  text-decoration: line-through;
+  text-decoration-color: #9ca3af;
+  -webkit-text-decoration-color: #9ca3af;
+  animation: strike-text-out 1s ease-out forwards;
+}

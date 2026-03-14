@@ -531,15 +531,17 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                       transition-colors duration-1000 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
-                  {/* 取り消し線: textareaの実際の高さに追従するため、
-                      transparent divをtextareaと同じサイズで重ねて中央に線を引く */}
+                  {/* 取り消し線: text-decoration: line-through + clip-path で
+                      複数行それぞれに取り消し線を引く。
+                      textareaと全く同じスタイルのdivをabsoluteで重ねるためズレなし */}
                   {strikeState && (
-                    <div className="pointer-events-none absolute inset-0 flex items-center overflow-hidden" aria-hidden>
-                      <span className={`w-full px-1 ${TEXT_CLASS} ${LEADING_CLASS} whitespace-pre-wrap break-words relative`}
-                        style={{ color: 'transparent', wordBreak: 'break-all' }}>
-                        {node.text || '\u00A0'}
-                        {strikeLine}
-                      </span>
+                    <div
+                      className={`pointer-events-none absolute inset-0 px-1 ${TEXT_CLASS} ${LEADING_CLASS} whitespace-pre-wrap break-words overflow-hidden
+                        ${strikeState === 'in' ? 'strike-text-in' : strikeState === 'done' ? 'strike-text-done' : 'strike-text-out'}`}
+                      style={{ color: 'transparent', wordBreak: 'break-word' }}
+                      aria-hidden
+                    >
+                      {node.text || '\u00A0'}
                     </div>
                   )}
                 </div>
