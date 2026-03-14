@@ -640,64 +640,59 @@ function OutlinerApp({ user }: { user: User }) {
     </div>
   );
 
-  const fontSizeOrder: FontSize[] = ['sm', 'md', 'lg'];
-
   return (
     <div className="min-h-screen bg-white text-gray-800 font-sans flex flex-col">
-      <header className="sticky top-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 p-3 shadow-sm">
-        <div className="w-full max-w-5xl mx-auto flex items-center gap-2">
+      <header className="sticky top-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 shadow-sm">
+        <div className="w-full max-w-5xl mx-auto px-3 py-2 flex flex-col gap-2">
 
-          {/* 検索バー */}
-          <div className="w-44 sm:w-52 flex items-center bg-gray-100 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-400 transition-shadow flex-shrink-0">
-            <Search className="w-3.5 h-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
-            <input
-              type="text"
-              placeholder="検索..."
-              className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          {/* フィルター */}
-          <div className="flex items-center bg-gray-100 p-0.5 rounded-lg flex-shrink-0">
-            {(['ALL', 'ACTIVE', 'COMPLETED'] as const).map((m) => (
-              <button key={m} onClick={() => setFilterMode(m)}
-                className={`px-2 py-1 text-xs font-medium rounded-md transition-all ${filterMode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                {m === 'ALL' ? 'すべて' : m === 'ACTIVE' ? '未完了' : '完了済み'}
-              </button>
-            ))}
-          </div>
-
-          {/* 文字サイズ */}
-          <div className="flex items-center bg-gray-100 p-0.5 rounded-lg flex-shrink-0" title="文字サイズ">
-            {fontSizeOrder.map((s) => (
-              <button key={s} onClick={() => setFontSize(s)}
-                className={`w-6 h-6 text-xs font-medium rounded-md transition-all ${fontSize === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                {s === 'sm' ? 'S' : s === 'md' ? 'M' : 'L'}
-              </button>
-            ))}
-          </div>
-
-          {/* スペーサー */}
-          <div className="flex-1" />
-
-          {/* メールアドレス ＋ ログアウト */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span
-              className="text-sm text-gray-500 hidden sm:block max-w-[220px] truncate"
-              title={user.email || ''}
-            >
+          {/* 1行目：検索バー ＋ ログアウト */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center bg-gray-100 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-gray-300 transition-shadow">
+              <Search className="w-3.5 h-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
+              <input
+                type="text"
+                placeholder="検索..."
+                className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+            </div>
+            {/* メールアドレス（PCのみ表示） */}
+            <span className="text-sm text-gray-500 hidden sm:block max-w-[220px] truncate flex-shrink-0" title={user.email || ''}>
               {user.email}
             </span>
             <button
               onClick={() => signOut(auth)}
               title="ログアウト"
-              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
             >
               <LogOut className="w-4 h-4" />
             </button>
           </div>
+
+          {/* 2行目：フィルター ＋ 文字サイズ（＋PCはスペーサー） */}
+          <div className="flex items-center gap-2">
+            {/* フィルター */}
+            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg">
+              {(['ALL', 'ACTIVE', 'COMPLETED'] as const).map((m) => (
+                <button key={m} onClick={() => setFilterMode(m)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${filterMode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  {m === 'ALL' ? 'すべて' : m === 'ACTIVE' ? '未完了' : '完了済み'}
+                </button>
+              ))}
+            </div>
+
+            {/* 文字サイズ */}
+            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg" title="文字サイズ">
+              {(['sm', 'md', 'lg'] as FontSize[]).map((s) => (
+                <button key={s} onClick={() => setFontSize(s)}
+                  className={`w-6 h-6 text-xs font-medium rounded-md transition-all ${fontSize === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  {s === 'sm' ? 'S' : s === 'md' ? 'M' : 'L'}
+                </button>
+              ))}
+            </div>
+          </div>
+
         </div>
       </header>
 
