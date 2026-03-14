@@ -268,33 +268,64 @@ function MobileStrikeLines({ text, strikeState, containerRef }: {
   strikeState: 'in' | 'done' | 'out';
   containerRef: React.RefObject<HTMLTextAreaElement>;
 }) {
-  const [lineCount, setLineCount] = useState(1);
   const lineHeightPx = 20; // leading-5 = 20px
+  const paddingPx = 4;     // px-1 = 4px
+
+  // 各行のテキスト幅(px)を計算
+  const [lineWidths, setLineWidths] = useState<number[]>([]);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const count = Math.max(1, Math.round(el.scrollHeight / lineHeightPx));
-    setLineCount(count);
+
+    // Canvasでフォントサイズに合わせてテキスト幅を計測
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // textarea の computed font を取得
+    const style = window.getComputedStyle(el);
+    ctx.font = `${style.fontSize} ${style.fontFamily}`;
+
+    const containerWidth = el.clientWidth - paddingPx * 2;
+    const words = text.split('');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    // 1文字ずつ追加して折り返し計算
+    for (const char of words) {
+      const testLine = currentLine + char;
+      if (ctx.measureText(testLine).width > containerWidth && currentLine !== '') {
+        lines.push(currentLine);
+        currentLine = char;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    if (lines.length === 0) lines.push('');
+
+    setLineWidths(lines.map(line => Math.min(ctx.measureText(line).width, containerWidth)));
   }, [text, containerRef]);
 
+  const lineCount = lineWidths.length;
   const perLine = 0.4; // 1行あたりのアニメーション時間（秒）
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {Array.from({ length: lineCount }, (_, i) => {
-        // 完了時: 下の行(lineCount-1-i)から順に → 行インデックスが大きいほど先
-        // 取消時: 上の行(i=0)から順に → 行インデックスが小さいほど先
-        const lineIdx = strikeState === 'out' ? i : (lineCount - 1 - i);
-        const delay = lineIdx * perLine;
+      {lineWidths.map((width, i) => {
+        // 完了時: 上→下（i=0が先）
+        // 取消時: 下→上（i=lineCount-1が先）
+        const orderIdx = strikeState === 'out' ? (lineCount - 1 - i) : i;
+        const delay = orderIdx * perLine;
 
         return (
           <div
             key={i}
             style={{
               position: 'absolute',
-              left: 4,
-              right: 4,
+              left: paddingPx,
+              width: width,
               top: i * lineHeightPx + lineHeightPx / 2 - 1,
               height: 1.5,
               backgroundColor: '#9ca3af',
