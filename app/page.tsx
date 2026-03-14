@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useReducer, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Circle, Search, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, List, CircleDot, CircleCheck, CalendarDays, CalendarCheck2, CalendarX2 } from 'lucide-react';
+import { Circle, Search, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, List, CircleDot, CircleCheck, CalendarDays, CalendarCheck2, CalendarX2, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged, User, updateProfile,
@@ -53,7 +53,10 @@ type Action =
   | { type: 'DELETE'; id: string } | { type: 'MOVE_UP'; id: string } | { type: 'MOVE_DOWN'; id: string }
   | { type: 'SET_FOCUS'; id: string } | { type: 'TOGGLE_COMPLETE'; id: string }
   | { type: 'SET_NODES'; nodes: NodesMap }
-  | { type: 'RESTORE_NODES'; nodes: NodesMap };
+  | { type: 'RESTORE_NODES'; nodes: NodesMap }
+  | { type: 'REORDER_UP'; id: string }
+  | { type: 'REORDER_DOWN'; id: string }
+  | { type: 'MOVE_NODE'; id: string; targetParentId: string; targetIndex: number };
 
 function reducer(state: State, action: Action): State {
   const nodes: NodesMap = { ...state.nodes };
@@ -122,6 +125,38 @@ function reducer(state: State, action: Action): State {
     case 'TOGGLE_COMPLETE': { clone(action.id).isCompleted = !(nodes[action.id] as OutlineNode).isCompleted; return { ...state, nodes }; }
     case 'SET_NODES': return { ...state, nodes: action.nodes };
     case 'RESTORE_NODES': return { ...state, nodes: action.nodes };
+    case 'REORDER_UP': {
+      const { id } = action; const node = nodes[id] as OutlineNode;
+      const parent = clone(node.parent); const index = parent.children.indexOf(id);
+      if (index === 0) return state;
+      const children = [...parent.children];
+      [children[index - 1], children[index]] = [children[index], children[index - 1]];
+      parent.children = children;
+      return { ...state, nodes, focusId: id };
+    }
+    case 'REORDER_DOWN': {
+      const { id } = action; const node = nodes[id] as OutlineNode;
+      const parent = clone(node.parent); const index = parent.children.indexOf(id);
+      if (index === parent.children.length - 1) return state;
+      const children = [...parent.children];
+      [children[index], children[index + 1]] = [children[index + 1], children[index]];
+      parent.children = children;
+      return { ...state, nodes, focusId: id };
+    }
+    case 'MOVE_NODE': {
+      const { id, targetParentId, targetIndex } = action;
+      const node = nodes[id] as OutlineNode;
+      if (node.parent !== targetParentId) return state;
+      const parent = clone(targetParentId);
+      const fromIndex = parent.children.indexOf(id);
+      if (fromIndex === -1) return state;
+      const children = [...parent.children];
+      children.splice(fromIndex, 1);
+      const insertAt = targetIndex > fromIndex ? targetIndex - 1 : targetIndex;
+      children.splice(insertAt, 0, id);
+      parent.children = children;
+      return { ...state, nodes };
+    }
     default: return state;
   }
 }
@@ -261,99 +296,32 @@ function AuthScreen() {
   );
 }
 
-// --- スマホ複数行取り消し線コンポーネント ---
-// textareaのDOMから実際の行数を取得し、下→上の順でアニメーション
-function MobileStrikeLines({ text, strikeState, containerRef }: {
-  text: string;
-  strikeState: 'in' | 'done' | 'out';
-  containerRef: React.RefObject<HTMLTextAreaElement>;
-}) {
-  const lineHeightPx = 20; // leading-5 = 20px
-  const paddingPx = 4;     // px-1 = 4px
 
-  // 各行のテキスト幅(px)を計算
-  const [lineWidths, setLineWidths] = useState<number[]>([]);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    // Canvasでフォントサイズに合わせてテキスト幅を計測
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // textarea の computed font を取得
-    const style = window.getComputedStyle(el);
-    ctx.font = `${style.fontSize} ${style.fontFamily}`;
-
-    const containerWidth = el.clientWidth - paddingPx * 2;
-    const words = text.split('');
-    const lines: string[] = [];
-    let currentLine = '';
-
-    // 1文字ずつ追加して折り返し計算
-    for (const char of words) {
-      const testLine = currentLine + char;
-      if (ctx.measureText(testLine).width > containerWidth && currentLine !== '') {
-        lines.push(currentLine);
-        currentLine = char;
-      } else {
-        currentLine = testLine;
-      }
-    }
-    if (currentLine) lines.push(currentLine);
-    if (lines.length === 0) lines.push('');
-
-    setLineWidths(lines.map(line => Math.min(ctx.measureText(line).width, containerWidth)));
-  }, [text, containerRef]);
-
-  const lineCount = lineWidths.length;
-  const perLine = 0.4; // 1行あたりのアニメーション時間（秒）
-
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {lineWidths.map((width, i) => {
-        // 完了時: 上→下（i=0が先）
-        // 取消時: 下→上（i=lineCount-1が先）
-        const orderIdx = strikeState === 'out' ? (lineCount - 1 - i) : i;
-        const delay = orderIdx * perLine;
-
-        return (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              left: paddingPx,
-              width: width,
-              top: i * lineHeightPx + lineHeightPx / 2 - 1,
-              height: 1.5,
-              backgroundColor: '#9ca3af',
-              clipPath: strikeState === 'done' ? 'inset(0 0% 0 0)' : undefined,
-              animation: strikeState !== 'done'
-                ? `${strikeState === 'out' ? 'hide-rtl' : 'reveal-ltr'} ${perLine}s ease-out ${delay}s both`
-                : 'none',
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
+// 日付を "M/D" 形式に変換
+const formatDateShort = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const [, m, d] = dateStr.split('-');
+  return `${parseInt(m)}/${parseInt(d)}`;
+};
 
 // --- ツリーアイテム ---
 interface TreeItemProps {
   id: string; nodes: NodesMap; dispatch: React.Dispatch<Action>;
   focusId: string | null; matched: Set<string>; isFiltering: boolean; searchQuery: string;
   onDeleteRequest: (id: string, snapshot: NodesMap) => void;
+  draggingId: string | null; dragOverId: string | null;
+  onDragStart: (id: string) => void; onDragOver: (id: string) => void;
+  onDragEnd: () => void; onDrop: (targetId: string) => void;
 }
 
-const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFiltering, searchQuery, onDeleteRequest }: TreeItemProps) => {
+const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFiltering, searchQuery, onDeleteRequest, draggingId, dragOverId, onDragStart, onDragOver, onDragEnd, onDrop }: TreeItemProps) => {
   const node = nodes[id] as OutlineNode;
-  const mobileInputRef = useRef<HTMLTextAreaElement>(null);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
   const desktopInputRef = useRef<HTMLInputElement>(null);
   const startDateRef = useRef<HTMLInputElement>(null);
   const endDateRef = useRef<HTMLInputElement>(null);
+  const mobileStartDateRef = useRef<HTMLInputElement>(null);
+  const mobileEndDateRef = useRef<HTMLInputElement>(null);
   const [selfHovered, setSelfHovered] = useState(false);
 
   // 取り消し線アニメーション状態
@@ -377,13 +345,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     }
   }, [node.isCompleted]);
 
-  // textareaの高さを自動調整（初期表示・テキスト変更時）
-  useEffect(() => {
-    const el = mobileInputRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = el.scrollHeight + 'px';
-  }, [node.text]);
+  // (スマホをinput type=textに変更したため高さ自動調整は不要)
 
   useEffect(() => {
     if (focusId !== id) return;
@@ -423,6 +385,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       const el = (e.target as HTMLInputElement | HTMLTextAreaElement);
       if (node.text === '' && el.selectionStart === 0) { e.preventDefault(); dispatch({ type: 'DELETE', id }); }
     }
+    else if (e.key === 'ArrowUp' && e.altKey) { e.preventDefault(); dispatch({ type: 'REORDER_UP', id }); }
+    else if (e.key === 'ArrowDown' && e.altKey) { e.preventDefault(); dispatch({ type: 'REORDER_DOWN', id }); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); dispatch({ type: 'MOVE_UP', id }); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); dispatch({ type: 'MOVE_DOWN', id }); }
   };
@@ -486,28 +450,86 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     </div>
   );
 
-  // 取り消し線アニメーション
-  // 取り消し線 + グレーテキスト層
-  // グレーテキスト層はinputと同じスタイルで上に重ねる
-  // PC(input): absolute inset-0 なので同じクラスで合う
-  // スマホ(textarea): 同じクラスで重ねると高さが合わないので、
-  //   グレー層も textarea と全く同じ style で配置する
-  const grayTextClass = strikeState === 'in'   ? 'gray-text-in'   :
-                        strikeState === 'done'  ? 'gray-text-done' :
-                        strikeState === 'out'   ? 'gray-text-out'  : '';
-
   const strikeLine = strikeState ? (
     <span className={"strike-line " + strikeState} />
   ) : null;
 
+  // ドロップインジケーター表示条件
+  const draggingNodeParent = draggingId ? (nodes[draggingId] as OutlineNode)?.parent : null;
+  const showDropIndicator = dragOverId === id && draggingId !== id && draggingNodeParent === node.parent;
+
+  // スマホ用インデント可否
+  const parentNode = nodes[node.parent];
+  const siblingIndex = parentNode ? (parentNode as OutlineNode).children?.indexOf(id) ?? parentNode.children.indexOf(id) : -1;
+  const canIndent = siblingIndex > 0;
+  const canUnindent = node.parent !== 'root';
+
+  // スマホ用日付エリア（コンパクト表示）
+  const mobileDateArea = (
+    <div className="flex items-center gap-1 text-xs">
+      <span className="text-gray-400 flex-shrink-0">開始</span>
+      <div className="relative">
+        <button
+          className={`${node.startDate ? 'text-gray-600' : 'text-gray-400'} hover:text-gray-800 transition-colors`}
+          onClick={() => mobileStartDateRef.current?.showPicker?.()}
+        >
+          {node.startDate ? formatDateShort(node.startDate) : '未設定'}
+        </button>
+        <input
+          ref={mobileStartDateRef}
+          type="date"
+          value={node.startDate}
+          onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
+          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+          style={{ fontSize: '16px' }}
+        />
+      </div>
+      <span className="text-gray-300 flex-shrink-0">→</span>
+      <span className="text-gray-400 flex-shrink-0">終了</span>
+      <div className="relative">
+        <button
+          className={`${node.endDate ? 'text-gray-600' : 'text-gray-400'} hover:text-gray-800 transition-colors`}
+          onClick={() => mobileEndDateRef.current?.showPicker?.()}
+        >
+          {node.endDate ? formatDateShort(node.endDate) : '未設定'}
+        </button>
+        <input
+          ref={mobileEndDateRef}
+          type="date"
+          value={node.endDate}
+          min={node.startDate}
+          onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
+          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+          style={{ fontSize: '16px' }}
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div className="mb-0.5">
-      <div className="flex flex-row">
+      {/* ドロップインジケーター */}
+      {showDropIndicator && (
+        <div className="h-0.5 bg-blue-400 rounded mx-1 mb-0.5" />
+      )}
+      <div
+        className={`flex flex-row ${draggingId === id ? 'opacity-50' : ''}`}
+        draggable
+        onDragStart={e => { e.stopPropagation(); onDragStart(id); }}
+        onDragOver={e => { e.preventDefault(); e.stopPropagation(); onDragOver(id); }}
+        onDragEnd={e => { e.stopPropagation(); onDragEnd(); }}
+        onDrop={e => { e.preventDefault(); e.stopPropagation(); onDrop(id); }}
+      >
 
         {/* バレット列
             ・バレットボタン自身に PY_CLASS を持たせてコンテンツ行と高さを揃える
             ・縦線は flex-1 でボタン直下〜子ノードコンテナ末端まで伸びる */}
         <div className="flex flex-col flex-shrink-0 w-7">
+          {/* ドラッグハンドル（PCのみ・ホバー時表示） */}
+          <div className={`hidden sm:flex items-center justify-center w-4 h-full cursor-grab active:cursor-grabbing transition-opacity ${selfHovered ? 'opacity-40 hover:opacity-80' : 'opacity-0'}`}
+            style={{ position: 'absolute', marginLeft: '-16px' }}>
+            <GripVertical size={14} className="text-gray-400" />
+          </div>
           <button
             onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
             className={`w-5 mx-1 ${PY_CLASS} flex items-center justify-center transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''}`}
@@ -584,60 +606,57 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             onMouseEnter={() => setSelfHovered(true)}
             onMouseLeave={() => setSelfHovered(false)}
           >
-            {/* 1行目: テキスト + ゴミ箱 */}
+            {/* 1行目: テキスト + インデントボタン + ゴミ箱 */}
             <div className="flex items-center">
               <div className={`flex-1 min-w-0 transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''}`}>
                 <div className="relative">
-                  <textarea
+                  <input
                     ref={mobileInputRef}
+                    type="text"
                     value={node.text}
-                    rows={1}
-                    onChange={e => {
-                      const val = e.target.value;
-                      if (val.includes('\n')) {
-                        const pos = e.target.selectionStart - 1;
-                        const textBefore = val.slice(0, val.indexOf('\n'));
-                        if (pos === 0 && node.text.length > 0) {
-                          dispatch({ type: 'ADD_NODE_BEFORE', beforeId: id });
-                        } else {
-                          dispatch({ type: 'UPDATE_TEXT', id, text: textBefore });
-                          dispatch({ type: 'ADD_NODE', afterId: id });
-                        }
-                        return;
-                      }
-                      // 高さを自動調整
-                      e.target.style.height = 'auto';
-                      e.target.style.height = e.target.scrollHeight + 'px';
-                      dispatch({ type: 'UPDATE_TEXT', id, text: val });
-                    }}
+                    onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
                     onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
                     onKeyDown={handleKeyDown}
                     placeholder="タスクを入力"
-                    style={{ resize: 'none', overflow: 'hidden' }}
-                    className={`w-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
+                    style={{ overflowX: 'auto' }}
+                    className={`w-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS} ${PY_CLASS}
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                       transition-colors duration-1000 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
-                  {/* 取り消し線: 行ごとに下→上の順でアニメーション */}
+                  {/* 取り消し線（シンプルな一本線） */}
                   {strikeState && (
-                    <MobileStrikeLines
-                      text={node.text}
-                      strikeState={strikeState}
-                      containerRef={mobileInputRef}
-                    />
+                    <div className="pointer-events-none absolute inset-0 flex items-center px-1" aria-hidden>
+                      <div className="w-full h-px bg-gray-400" />
+                    </div>
                   )}
                 </div>
               </div>
+              {/* インデント減ボタン */}
+              <button
+                onClick={() => dispatch({ type: 'UNINDENT', id })}
+                disabled={!canUnindent}
+                title="インデント減"
+                className="flex-shrink-0 p-1 text-gray-300 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-20 disabled:cursor-not-allowed">
+                <ChevronLeft size={16} />
+              </button>
+              {/* インデント増ボタン */}
+              <button
+                onClick={() => dispatch({ type: 'INDENT', id })}
+                disabled={!canIndent}
+                title="インデント増"
+                className="flex-shrink-0 p-1 text-gray-300 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-20 disabled:cursor-not-allowed">
+                <ChevronRight size={16} />
+              </button>
               <button onClick={handleDeleteClick} title="削除"
                 className="flex-shrink-0 ml-1 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors">
                 <Trash2 size={13} />
               </button>
             </div>
 
-            {/* 2行目: 日付 - スマホでは日付なしでも薄く常時表示 */}
-            <div className={`mt-1 ${hasDates ? 'pb-3' : 'pb-1'}`}>
+            {/* 2行目: 日付（コンパクト表示） */}
+            <div className="mt-0.5 pb-1">
               <div className={`transition-opacity duration-150 ${node.isCompleted ? 'opacity-40' : mobileDateClass}`}>
-                {dateArea}
+                {mobileDateArea}
               </div>
             </div>
           </div>
@@ -656,6 +675,12 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                   isFiltering={isFiltering}
                   searchQuery={searchQuery}
                   onDeleteRequest={onDeleteRequest}
+                  draggingId={draggingId}
+                  dragOverId={dragOverId}
+                  onDragStart={onDragStart}
+                  onDragOver={onDragOver}
+                  onDragEnd={onDragEnd}
+                  onDrop={onDrop}
                 />
               ))}
             </div>
@@ -757,6 +782,39 @@ function OutlinerApp({ user }: { user: User }) {
       );
     }
   }, [state.nodes, title, filterMode, user, isLoaded]);
+
+  // ドラッグ&ドロップ状態
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const handleDragStart = useCallback((id: string) => {
+    setDraggingId(id);
+  }, []);
+
+  const handleDragOver = useCallback((id: string) => {
+    setDragOverId(id);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggingId(null);
+    setDragOverId(null);
+  }, []);
+
+  const handleDrop = useCallback((targetId: string) => {
+    setDraggingId((prev: string | null) => {
+      if (prev && prev !== targetId) {
+        const draggingNode = state.nodes[prev] as OutlineNode;
+        const targetNode = state.nodes[targetId] as OutlineNode;
+        if (draggingNode && targetNode && draggingNode.parent === targetNode.parent) {
+          const parent = state.nodes[targetNode.parent] as OutlineNode;
+          const targetIndex = parent.children.indexOf(targetId);
+          dispatch({ type: 'MOVE_NODE', id: prev, targetParentId: targetNode.parent, targetIndex });
+        }
+      }
+      return null;
+    });
+    setDragOverId(null);
+  }, [state.nodes]);
 
   const handleDeleteRequest = useCallback((nodeId: string, snapshot: NodesMap) => {
     const node = snapshot[nodeId] as OutlineNode;
@@ -882,6 +940,12 @@ function OutlinerApp({ user }: { user: User }) {
                 isFiltering={isFiltering}
                 searchQuery={searchQuery}
                 onDeleteRequest={handleDeleteRequest}
+                draggingId={draggingId}
+                dragOverId={dragOverId}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+                onDrop={handleDrop}
               />
             ))}
           </div>
