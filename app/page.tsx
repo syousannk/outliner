@@ -261,6 +261,64 @@ function AuthScreen() {
   );
 }
 
+// --- スマホ複数行取り消し線コンポーネント ---
+// textareaのDOMから実際の行数を取得し、下→上の順でアニメーション
+function MobileStrikeLines({ text, strikeState, containerRef, textClass, leadingClass }: {
+  text: string;
+  strikeState: 'in' | 'done' | 'out';
+  containerRef: React.RefObject<HTMLTextAreaElement>;
+  textClass: string;
+  leadingClass: string;
+}) {
+  const [lineCount, setLineCount] = useState(1);
+  const lineHeightPx = 20; // leading-5 = 1.25rem = 20px
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const count = Math.max(1, Math.round(el.scrollHeight / lineHeightPx));
+    setLineCount(count);
+  }, [text, containerRef]);
+
+  const delayPerLine = 0.15; // 各行の遅延（秒）
+  const totalDuration = 1; // アニメーション1本の長さ（秒）
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      {Array.from({ length: lineCount }, (_, i) => {
+        // 完了時（in/done）: 下から上 → 下の行(lineCount-1)が先、上の行(0)が後
+        // 取り消し時（out）: 上から下 → 上の行(0)が先、下の行(lineCount-1)が後
+        const delay = strikeState === 'out'
+          ? i * delayPerLine                        // 上→下
+          : (lineCount - 1 - i) * delayPerLine;    // 下→上
+
+        const top = i * lineHeightPx;
+        const animName = strikeState === 'out' ? 'hide-rtl' : 'reveal-ltr';
+        const clipPath = strikeState === 'done' ? 'inset(0 0% 0 0)' : undefined;
+
+        return (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              left: 4, // px-1 = 4px
+              right: 4,
+              top: top + lineHeightPx / 2 - 1,
+              height: 1.5,
+              backgroundColor: '#9ca3af',
+              animation: strikeState !== 'done'
+                ? `${animName} ${totalDuration}s ease-out ${delay}s forwards`
+                : 'none',
+              clipPath: clipPath,
+              animationFillMode: 'both',
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 // --- ツリーアイテム ---
 interface TreeItemProps {
   id: string; nodes: NodesMap; dispatch: React.Dispatch<Action>;
@@ -531,18 +589,15 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                       transition-colors duration-1000 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
-                  {/* 取り消し線: text-decoration: line-through + clip-path で
-                      複数行それぞれに取り消し線を引く。
-                      textareaと全く同じスタイルのdivをabsoluteで重ねるためズレなし */}
+                  {/* 取り消し線: 行ごとに下→上の順でアニメーション */}
                   {strikeState && (
-                    <div
-                      className={`pointer-events-none absolute inset-0 px-1 ${TEXT_CLASS} ${LEADING_CLASS} whitespace-pre-wrap break-words overflow-hidden
-                        ${strikeState === 'in' ? 'strike-text-in' : strikeState === 'done' ? 'strike-text-done' : 'strike-text-out'}`}
-                      style={{ color: 'transparent', wordBreak: 'break-word' }}
-                      aria-hidden
-                    >
-                      {node.text || '\u00A0'}
-                    </div>
+                    <MobileStrikeLines
+                      text={node.text}
+                      strikeState={strikeState}
+                      containerRef={mobileInputRef}
+                      textClass={TEXT_CLASS}
+                      leadingClass={LEADING_CLASS}
+                    />
                   )}
                 </div>
               </div>
