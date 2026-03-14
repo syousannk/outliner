@@ -24,7 +24,7 @@ const TEXT_CLASS = 'text-sm';
 const LEADING_CLASS = 'leading-5';
 const PY_CLASS = 'py-1';
 // 日付エリアの固定幅（全階層で右端を揃える）
-const DATE_W = 'w-[270px]';
+const DATE_W = 'w-[300px]';
 
 const createNode = (overrides: Partial<OutlineNode> = {}): OutlineNode => ({
   id: generateId(), text: '', startDate: '', endDate: '',
