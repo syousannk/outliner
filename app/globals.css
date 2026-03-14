@@ -26,6 +26,6 @@
   pointer-events: none;
 }
 
-.strike-line.in   { animation: reveal-ltr 0.5s ease-out forwards; }
+.strike-line.in   { animation: reveal-ltr 2s ease-out forwards; }
 .strike-line.done { clip-path: inset(0 0% 0 0); animation: none; }
-.strike-line.out  { animation: hide-rtl  0.5s ease-out forwards; }
+.strike-line.out  { animation: hide-rtl  2s ease-out forwards; }

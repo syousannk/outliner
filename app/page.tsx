@@ -288,11 +288,11 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     prevCompleted.current = node.isCompleted;
     if (node.isCompleted) {
       setStrikeState('in');
-      const t = setTimeout(() => setStrikeState('done'), 500);
+      const t = setTimeout(() => setStrikeState('done'), 2000);
       return () => clearTimeout(t);
     } else {
       setStrikeState('out');
-      const t = setTimeout(() => setStrikeState(null), 500);
+      const t = setTimeout(() => setStrikeState(null), 2000);
       return () => clearTimeout(t);
     }
   }, [node.isCompleted]);
