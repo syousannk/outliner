@@ -485,12 +485,10 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         </div>
       </div>
 
-      {/* 子ノード ― 縦線は完了ボタン（バレット）の中心から出す
-          完了ボタン幅: w-5(20px) + mx-1(4px×2) = 28px
-          折りたたみアイコン幅: w-5(20px)
-          合計オフセット: 20 + 2(mx-1の左) + 10(w-5の中心) = 32px → ml-8 = 32px */}
+      {/* 子ノード ― 縦線をバレットボタン（w-5 + mx-1左）の中心に合わせる
+          バレット左マージン: mx-1 = 4px、ボタン幅 w-5 = 20px → 中心 = 4 + 10 = 14px */}
       {isExpanded && hasChildren && (
-        <div className="relative ml-8 pl-3 border-l border-gray-200">
+        <div className="relative ml-[14px] pl-3 border-l border-gray-200">
           {node.children.map((childId: string) => (
             <TreeItem
               key={childId}
@@ -639,8 +637,10 @@ function OutlinerApp({ user }: { user: User }) {
       <header className="sticky top-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 shadow-sm">
         <div className="w-full max-w-5xl mx-auto px-3 py-2 flex flex-col gap-2">
 
-          {/* 1行目：検索バー ＋ ログアウト */}
+          {/* 1行目：アイコン ＋ 検索バー ＋ ログアウト */}
           <div className="flex items-center gap-2">
+            {/* アプリアイコン */}
+            <img src="/icon-192.png" alt="Outliner" className="w-7 h-7 rounded-lg flex-shrink-0" />
             <div className="flex-1 flex items-center bg-gray-100 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-gray-300 transition-shadow">
               <Search className="w-3.5 h-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
               <input
@@ -692,14 +692,6 @@ function OutlinerApp({ user }: { user: User }) {
 
       <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-8 pb-24">
         <div className="sm:min-w-[700px] pr-2 sm:pr-4">
-          <div className="mb-8 px-2">
-            <input
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              className="text-2xl sm:text-3xl font-bold text-gray-900 bg-transparent outline-none w-full border-b-2 border-transparent hover:border-gray-200 focus:border-blue-400 transition-colors pb-1"
-              placeholder="タイトルを入力..."
-            />
-          </div>
 
           <div className="tree-root">
             {(state.nodes['root'] as OutlineNode).children.map((id: string) => (
