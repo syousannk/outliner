@@ -327,9 +327,10 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     onDeleteRequest(id, snapshot);
   };
 
-  // showPicker() を使うとブラウザによってカレンダーが画面左上に表示される
-  // → 通常の input クリック（ブラウザデフォルト）に任せる
-  const handleCalendarIconClick = () => { startDateRef.current?.click(); };
+  // showPicker() でカレンダーを開く
+  const handleCalendarIconClick = () => {
+    try { startDateRef.current?.showPicker?.(); } catch { startDateRef.current?.click(); }
+  };
 
   // 日付エリアの表示: 日付あり → 常時、なし → ホバー/フォーカス時のみ
   const showDateArea = hasDates || isFocused || selfHovered;
@@ -367,11 +368,16 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   );
 
   // 取り消し線オーバーレイ
-  // opacity:0 でテキストを非表示にしつつ、span のサイズ・位置を保持する
-  // strike-line の background-color は globals.css で gray-400 固定色を指定
+  // 取り消し線オーバーレイ
+  // テキストを color:transparent にして文字を非表示にしつつ、
+  // strike-line（absolute配置）だけを表示する。
+  // opacity:0 だと子要素の strike-line も消えてしまうため使わない。
   const strikeOverlay = (inline: boolean) => strikeState ? (
     <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden" aria-hidden>
-      <span style={{ opacity: 0 }} className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS}`}>
+      <span
+        style={{ color: 'transparent' }}
+        className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS}`}
+      >
         {node.text || '\u00A0'}
         <span className={`strike-line ${strikeState}`} />
       </span>
