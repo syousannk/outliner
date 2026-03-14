@@ -390,23 +390,25 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   // 取消時: グレーテキスト層が右→左に消えて黒テキストが現れる + 線が縮む
   const strikeOverlay = (inline: boolean) => {
     if (!strikeState) return null;
-    const spanClass = `absolute inset-0 flex items-center px-1 pointer-events-none overflow-hidden ${TEXT_CLASS} ${LEADING_CLASS} ${inline ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'}`;
+    // グレーテキスト層を input/textarea と全く同じ位置・スタイルで重ねる
+    // flex items-center は使わず absolute inset-0 + px-1 のみ（inputと同じ）
     const animStyle: React.CSSProperties =
       strikeState === 'in'   ? { animation: 'reveal-ltr 1s ease-out forwards', color: '#9ca3af' } :
       strikeState === 'done' ? { clipPath: 'inset(0 0% 0 0)', animation: 'none', color: '#9ca3af' } :
       /* out */                { animation: 'hide-rtl 1s ease-out forwards',   color: '#9ca3af' };
     return (
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-        {/* 取り消し線（テキストの幅に追従するspanの中に入れる） */}
-        <div className="relative px-1">
-          <span className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS}`}
-            style={{ color: 'transparent' }}>
-            {node.text || '\u00A0'}
-            <span className={`strike-line ${strikeState}`} />
-          </span>
-        </div>
-        {/* グレーテキスト: clip-pathで元テキストを上書きしながらスライド */}
-        <span className={spanClass} style={animStyle}>
+        {/* 取り消し線 */}
+        <span className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS} px-1`}
+          style={{ color: 'transparent' }}>
+          {node.text || '\u00A0'}
+          <span className={`strike-line ${strikeState}`} />
+        </span>
+        {/* グレーテキスト: inputと同じ absolute inset-0 で重ねる */}
+        <span
+          className={`absolute inset-0 px-1 pointer-events-none overflow-hidden ${TEXT_CLASS} ${LEADING_CLASS} ${inline ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'}`}
+          style={animStyle}
+        >
           {node.text || '\u00A0'}
         </span>
       </div>
