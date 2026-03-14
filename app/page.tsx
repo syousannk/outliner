@@ -487,7 +487,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         </div>
         <button
           type="button"
-          onClick={() => { if (node.startDate) dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' }); }}
+          onPointerDown={(e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); if (node.startDate) dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' }); }}
           className={`text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ml-1 p-1 ${node.startDate ? 'visible' : 'invisible'}`}>×</button>
       </div>
       <span className="text-gray-300 flex-shrink-0">→</span>
@@ -512,7 +512,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         </div>
         <button
           type="button"
-          onClick={() => { if (node.endDate) dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' }); }}
+          onPointerDown={(e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); if (node.endDate) dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' }); }}
           className={`text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ml-1 p-1 ${node.endDate ? 'visible' : 'invisible'}`}>×</button>
       </div>
     </div>
