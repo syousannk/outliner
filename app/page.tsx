@@ -390,9 +390,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         {/* 1行目：バレット・テキスト・(PC時は日付・ゴミ箱もここ) */}
         <div className="flex items-start flex-1 min-w-0">
 
-          {/* 完了トグル ＋ バレット
-              縦線はこのボタンの「下」から出す。
-              ボタン自体は items-start で上揃え → 縦線の起点が常にバレット直下になる */}
+          {/* 完了トグル ＋ バレット */}
           <div className="relative flex-shrink-0 self-start">
             <button
               onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
@@ -405,10 +403,6 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                 <Circle size={16} className="text-gray-400" />
               )}
             </button>
-            {/* 縦線：バレットボタンの中心 (mx-1=4px + w-5/2=10px = 14px) から子へ */}
-            {isExpanded && hasChildren && (
-              <div className="absolute left-[14px] top-full w-px bg-gray-200" style={{ bottom: 'calc(-100vh)' }} />
-            )}
           </div>
 
           {/* テキスト入力
@@ -493,10 +487,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         </div>
       </div>
 
-      {/* 子ノード：縦線はバレットのdivから絶対位置で出しているので、
-          ここではボーダーなしで左マージンだけ合わせる */}
+      {/* 子ノード：バレット中心(14px)から縦線を出す */}
       {isExpanded && hasChildren && (
-        <div className="relative ml-[14px] pl-3">
+        <div className="relative ml-[14px] pl-3 border-l border-gray-200">
           {node.children.map((childId: string) => (
             <TreeItem
               key={childId}
