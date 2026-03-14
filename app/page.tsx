@@ -282,10 +282,34 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     node.isCompleted ? 'done' : null
   );
   const prevCompleted = useRef(node.isCompleted);
+  const strikeLineRef = useRef<HTMLSpanElement>(null);
+  const strikeLineMobileRef = useRef<HTMLSpanElement>(null);
 
+  // isCompleted が変わったらDOMを直接操作してアニメーションをリセット
   useEffect(() => {
     if (node.isCompleted === prevCompleted.current) return;
     prevCompleted.current = node.isCompleted;
+
+    const applyAnimation = (el: HTMLSpanElement | null) => {
+      if (!el) return;
+      // アニメーションをリセット
+      el.style.animation = 'none';
+      el.style.width = node.isCompleted ? '0%' : '100%';
+      el.style.left = node.isCompleted ? '0' : 'auto';
+      el.style.right = node.isCompleted ? 'auto' : '0';
+      // 強制リフローでブラウザに現在状態を認識させる
+      void el.getBoundingClientRect();
+      // アニメーション開始
+      if (node.isCompleted) {
+        el.style.animation = 'strike-grow 0.5s ease-out forwards';
+      } else {
+        el.style.animation = 'strike-shrink 0.5s ease-out forwards';
+      }
+    };
+
+    applyAnimation(strikeLineRef.current);
+    applyAnimation(strikeLineMobileRef.current);
+
     if (node.isCompleted) {
       setStrikeState('in');
       const t = setTimeout(() => setStrikeState('done'), 500);
@@ -384,25 +408,20 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     </div>
   );
 
-  // 取り消し線。常時DOMに存在させてクラス切り替えのみでアニメーション制御。
-  // （再マウントするとアニメーションが初期状態からやり直しになるため）
-  const strikeOverlay = (inline: boolean) => (
+  // 取り消し線: DOM直接操作でアニメーションを制御（上の useEffect 参照）
+  // style の初期値は isCompleted の初期状態に合わせる
+  const lineInitStyle: React.CSSProperties = node.isCompleted
+    ? { left: 0, right: 'auto', width: '100%' }
+    : { width: 0, animation: 'none' };
+
+  const strikeOverlay = (inline: boolean, lineRef: React.RefObject<HTMLSpanElement>) => (
     <div className="pointer-events-none absolute inset-0 flex items-center overflow-hidden" aria-hidden>
       <span
         style={{ color: 'transparent' }}
         className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS} px-1`}
       >
         {node.text || '\u00A0'}
-        {/* strikeState が null でも span を残す（display:none ではなく width:0 で消す） */}
-        <span
-          className="strike-line"
-          style={
-            strikeState === 'in'   ? { left: 0, right: 'auto', width: 0, animation: 'strike-grow 0.5s ease-out forwards' } :
-            strikeState === 'done' ? { left: 0, right: 'auto', width: '100%', animation: 'none' } :
-            strikeState === 'out'  ? { right: 0, left: 'auto', width: '100%', animation: 'strike-shrink 0.5s ease-out forwards' } :
-            { width: 0, animation: 'none' }
-          }
-        />
+        <span ref={lineRef} className="strike-line" style={lineInitStyle} />
       </span>
     </div>
   );
@@ -455,7 +474,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                   ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                   transition-colors duration-500 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
               />
-              {strikeOverlay(false)}
+              {strikeOverlay(false, strikeLineRef)}
             </div>
 
             {/* リーダー線: 日付あり or ホバー/フォーカス時のみ表示 */}
@@ -515,7 +534,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                       transition-colors duration-500 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
-                  {strikeOverlay(true)}
+                  {strikeOverlay(true, strikeLineMobileRef)}
                 </div>
               </div>
               <button onClick={handleDeleteClick} title="削除"
