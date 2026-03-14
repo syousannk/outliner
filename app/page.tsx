@@ -385,8 +385,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   );
 
   // 取り消し線オーバーレイ
-  // テキストを color:transparent にして文字を非表示にしつつ strike-line だけ表示。
-  // 取り消し時（out）は黒文字を右→左にスライドインするレイヤーも重ねる。
+  // テキストを color:transparent にしてスペーサーとし、
+  // その上に strike-line（absolute）だけを表示する。
+  // 文字色のアニメーションは input/textarea の transition-colors duration-500 に完全に任せる。
   const strikeOverlay = (inline: boolean) => strikeState ? (
     <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden" aria-hidden>
       <span
@@ -396,14 +397,6 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         {node.text || '\u00A0'}
         <span className={`strike-line ${strikeState}`} />
       </span>
-      {/* 取り消し時: 黒文字を右→左にスライドイン（clip-pathアニメーション） */}
-      {strikeState === 'out' && (
-        <span
-          className={`text-restore ${inline ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS}`}
-        >
-          {node.text || '\u00A0'}
-        </span>
-      )}
     </div>
   ) : null;
 

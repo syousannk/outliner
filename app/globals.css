@@ -2,15 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 取り消し線: 左→右 */
-@keyframes strike-in  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-/* 取り消し線を消す: 右→左 */
-@keyframes strike-out { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+/* 取り消し線: 左→右に伸びる（完了時） */
+@keyframes strike-in {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
 
-/* 文字色マスク: 完了取り消し時、右→左にグレー→黒を戻す */
-@keyframes color-restore {
-  from { clip-path: inset(0 0% 0 0); }
-  to   { clip-path: inset(0 100% 0 0); }
+/* 取り消し線: 右→左に縮む（取り消し時） */
+@keyframes strike-out {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
 }
 
 .strike-line {
@@ -19,23 +20,27 @@
   left: 0;
   right: 0;
   top: 50%;
-  transform: translateY(-50%);
+  margin-top: -1px;
   height: 1.5px;
-  background-color: #9ca3af;
+  background-color: #9ca3af; /* gray-400 */
 }
-.strike-line.in   { transform-origin: left center;  animation: strike-in  0.5s ease-out forwards; }
-.strike-line.done { transform: scaleX(1) translateY(-50%); }
-.strike-line.out  { transform-origin: right center; animation: strike-out 0.5s ease-out forwards; }
 
-/* 取り消し時: テキストを黒色に重ねて右→左にスライドイン */
-.text-restore {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  padding: 0 4px;
-  color: #111827; /* gray-900 */
-  overflow: hidden;
-  pointer-events: none;
-  animation: color-restore 0.5s ease-out forwards;
+/* 完了時: transform-origin を左端にして左→右 */
+.strike-line.in {
+  transform-origin: left center;
+  transform: scaleX(0);
+  animation: strike-in 0.5s ease-out forwards;
+}
+
+/* 完了済み静止 */
+.strike-line.done {
+  transform-origin: left center;
+  transform: scaleX(1);
+}
+
+/* 取り消し時: transform-origin を右端にして右→左 */
+.strike-line.out {
+  transform-origin: right center;
+  transform: scaleX(1);
+  animation: strike-out 0.5s ease-out forwards;
 }
