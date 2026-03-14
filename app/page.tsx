@@ -322,6 +322,10 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const endDateRef = useRef<HTMLInputElement>(null);
   const mobileStartDateRef = useRef<HTMLInputElement>(null);
   const mobileEndDateRef = useRef<HTMLInputElement>(null);
+  const startClearBtnRef = useRef<HTMLButtonElement>(null);
+  const endClearBtnRef = useRef<HTMLButtonElement>(null);
+  const nodeRef = useRef(node);
+  nodeRef.current = node;
   const [selfHovered, setSelfHovered] = useState(false);
 
   // 取り消し線アニメーション状態
@@ -363,6 +367,26 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     };
     requestAnimationFrame(() => tryFocus());
   }, [focusId, id]);
+
+  // ×ボタンのネイティブtouchstartリスナー（passive:falseでpreventDefault可能）
+  // ReactのonPointerDown/onTouchStartはiOS Safariでghostクリックを防げないため直接登録
+  useEffect(() => {
+    const clearDate = (field: 'startDate' | 'endDate') => (e: TouchEvent) => {
+      const val = field === 'startDate' ? nodeRef.current.startDate : nodeRef.current.endDate;
+      if (!val) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dispatch({ type: 'UPDATE_DATES', id, field, value: '' });
+    };
+    const sh = clearDate('startDate');
+    const eh = clearDate('endDate');
+    startClearBtnRef.current?.addEventListener('touchstart', sh, { passive: false });
+    endClearBtnRef.current?.addEventListener('touchstart', eh, { passive: false });
+    return () => {
+      startClearBtnRef.current?.removeEventListener('touchstart', sh);
+      endClearBtnRef.current?.removeEventListener('touchstart', eh);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isFiltering && !matched.has(id)) return null;
 
@@ -486,8 +510,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
           />
         </div>
         <button
+          ref={startClearBtnRef}
           type="button"
-          onPointerDown={(e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); if (node.startDate) dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' }); }}
+          onClick={() => { if (node.startDate) dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' }); }}
           className={`text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ml-1 p-1 ${node.startDate ? 'visible' : 'invisible'}`}>×</button>
       </div>
       <span className="text-gray-300 flex-shrink-0">→</span>
@@ -511,8 +536,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
           />
         </div>
         <button
+          ref={endClearBtnRef}
           type="button"
-          onPointerDown={(e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); if (node.endDate) dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' }); }}
+          onClick={() => { if (node.endDate) dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' }); }}
           className={`text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ml-1 p-1 ${node.endDate ? 'visible' : 'invisible'}`}>×</button>
       </div>
     </div>
