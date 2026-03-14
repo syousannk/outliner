@@ -439,8 +439,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const showDateArea = hasDates || isFocused || selfHovered;
   // PC用: ホバー/フォーカス/日付あり時のみ表示
   const pcDateClass = showDateArea ? 'opacity-100' : 'opacity-0';
-  // スマホ用: 日付なしでも opacity-25 で常時表示
-  const mobileDateClass = hasDates ? 'opacity-100' : 'opacity-25';
+  // スマホ用: 日付なしでも opacity-50 で常時表示
+  const mobileDateClass = hasDates ? 'opacity-100' : 'opacity-50';
 
   // 日付エリア（PC・スマホ共通）
   // ×ボタンは常時レンダリング（日付なし時は invisible）して幅を確保しズレを防ぐ
@@ -449,7 +449,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
         <input ref={startDateRef} type="date" value={node.startDate}
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
-          className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.startDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
+          className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.startDate ? 'text-gray-500' : 'text-gray-600'}`}
           title="開始日" />
         {/* 常時表示で幅確保、日付なし時は invisible */}
         <button
@@ -461,7 +461,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
         <input ref={endDateRef} type="date" value={node.endDate} min={node.startDate}
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
-          className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.endDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
+          className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.endDate ? 'text-gray-500' : 'text-gray-600'}`}
           title="終了日" />
         {/* 常時表示で幅確保、日付なし時は invisible */}
         <button
