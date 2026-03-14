@@ -384,33 +384,18 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     </div>
   );
 
-  // 取り消し線 + 文字色オーバーレイ
-  // strike-line: width アニメーションで左→右（完了）/ 右→左（取り消し）
-  // text overlay: clip-path アニメーションでグレー文字が左→右に現れる（完了）
-  //               黒文字が右→左に現れる（取り消し）
+  // 取り消し線のみ。文字色は input/textarea の transition-colors に任せる。
   const strikeOverlay = (inline: boolean) => {
     if (!strikeState) return null;
-    const wrapClass = `relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS}`;
     return (
-      <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden" aria-hidden>
-        {/* スペーサー: テキストの幅/高さを確保（透明） */}
-        <span style={{ color: 'transparent' }} className={wrapClass}>
+      <div className="pointer-events-none absolute inset-0 flex items-center overflow-hidden" aria-hidden>
+        <span
+          style={{ color: 'transparent' }}
+          className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS} px-1`}
+        >
           {node.text || '\u00A0'}
-          {/* 取り消し線 */}
           <span className={`strike-line ${strikeState}`} />
         </span>
-        {/* 文字色オーバーレイ: 完了時はグレー文字、取り消し時は黒文字をアニメーション */}
-        {(strikeState === 'in' || strikeState === 'done') && (
-          <span className={`${strikeState === 'in' ? 'text-dim-overlay' : 'text-dim-overlay'} ${inline ? 'whitespace-pre-wrap break-all' : ''}`}
-            style={strikeState === 'done' ? { clipPath: 'inset(0 0% 0 0)', animation: 'none' } : {}}>
-            {node.text || '\u00A0'}
-          </span>
-        )}
-        {strikeState === 'out' && (
-          <span className={`text-restore-overlay ${inline ? 'whitespace-pre-wrap break-all' : ''}`}>
-            {node.text || '\u00A0'}
-          </span>
-        )}
       </div>
     );
   };
@@ -723,7 +708,7 @@ function OutlinerApp({ user }: { user: User }) {
 
             {/* 開始日フィルター */}
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5" title="開始日">
-              <span className="text-[9px] text-gray-400 px-0.5 font-medium select-none">開</span>
+              <span className="text-[9px] text-gray-400 px-0.5 font-medium select-none">開始日</span>
               {([
                 { key: 'START_TODAY',    icon: <CalendarDays size={13} />,   title: '開始: 今日' },
                 { key: 'START_TOMORROW', icon: <CalendarCheck2 size={13} />, title: '開始: 明日' },
@@ -740,7 +725,7 @@ function OutlinerApp({ user }: { user: User }) {
 
             {/* 終了日フィルター */}
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5" title="終了日">
-              <span className="text-[9px] text-gray-400 px-0.5 font-medium select-none">終</span>
+              <span className="text-[9px] text-gray-400 px-0.5 font-medium select-none">終了日</span>
               {([
                 { key: 'END_TODAY',    icon: <CalendarDays size={13} />,   title: '終了: 今日' },
                 { key: 'END_TOMORROW', icon: <CalendarCheck2 size={13} />, title: '終了: 明日' },
