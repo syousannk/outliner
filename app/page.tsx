@@ -288,11 +288,11 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     prevCompleted.current = node.isCompleted;
     if (node.isCompleted) {
       setStrikeState('in');
-      const t = setTimeout(() => setStrikeState('done'), 2000);
+      const t = setTimeout(() => setStrikeState('done'), 1000);
       return () => clearTimeout(t);
     } else {
       setStrikeState('out');
-      const t = setTimeout(() => setStrikeState(null), 2000);
+      const t = setTimeout(() => setStrikeState(null), 1000);
       return () => clearTimeout(t);
     }
   }, [node.isCompleted]);
@@ -384,8 +384,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     </div>
   );
 
-  // 取り消し線: clip-pathアニメーションでクラス切り替えのみ制御
-  // in=左→右に現れる, done=静止, out=右→左に消える
+  // 取り消し線 + テキスト色オーバーレイ（同じclip-pathアニメーションで同期）
   const strikeOverlay = (inline: boolean) => strikeState ? (
     <div className="pointer-events-none absolute inset-0 flex items-center overflow-hidden" aria-hidden>
       <span
@@ -394,6 +393,11 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       >
         {node.text || '\u00A0'}
         <span className={`strike-line ${strikeState}`} />
+      </span>
+      {/* テキスト色オーバーレイ: 取り消し線と同じ方向・速度で色を変える */}
+      <span className={`${strikeState === 'out' ? 'text-restore-overlay' : 'text-dim-overlay'} ${inline ? 'whitespace-pre-wrap break-all' : ''}`}
+        style={strikeState === 'done' ? { clipPath: 'inset(0 0% 0 0)', animation: 'none' } : {}}>
+        {node.text || '\u00A0'}
       </span>
     </div>
   ) : null;
@@ -444,7 +448,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                 placeholder="タスクを入力"
                 className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                   ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                  transition-colors duration-500 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                  ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
               />
               {strikeOverlay(false)}
             </div>
@@ -504,7 +508,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                     style={{ resize: 'none', overflow: 'hidden' }}
                     className={`w-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                      transition-colors duration-500 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                      ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
                   {strikeOverlay(true)}
                 </div>

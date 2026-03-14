@@ -26,6 +26,35 @@
   pointer-events: none;
 }
 
-.strike-line.in   { animation: reveal-ltr 2s ease-out forwards; }
+.strike-line.in   { animation: reveal-ltr 1s ease-out forwards; }
 .strike-line.done { clip-path: inset(0 0% 0 0); animation: none; }
-.strike-line.out  { animation: hide-rtl  2s ease-out forwards; }
+.strike-line.out  { animation: hide-rtl  1s ease-out forwards; }
+
+/* テキスト色変化: 取り消し線と同じclip-pathで同期 */
+/* 完了時: グレー文字が左→右に現れる */
+.text-dim-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  color: #9ca3af;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: pre;
+  animation: reveal-ltr 1s ease-out forwards;
+}
+/* 取り消し時: グレー文字が右→左に消える（黒文字が現れる） */
+.text-restore-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  color: #9ca3af;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: pre;
+  clip-path: inset(0 0% 0 0);
+  animation: hide-rtl 1s ease-out forwards;
+}
