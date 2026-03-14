@@ -481,7 +481,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             type="date"
             value={node.startDate}
             onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
-            className="absolute inset-0 opacity-0 w-full h-full pointer-events-none"
+            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
             style={{ fontSize: '16px' }}
           />
         </div>
@@ -505,7 +505,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             value={node.endDate}
             min={node.startDate}
             onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
-            className="absolute inset-0 opacity-0 w-full h-full pointer-events-none"
+            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
             style={{ fontSize: '16px' }}
           />
         </div>
