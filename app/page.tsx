@@ -385,50 +385,23 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   );
 
   // 取り消し線アニメーション
-  const strikeOverlay = (inline: boolean) => {
-    if (!strikeState) return null;
-    const animStyle: React.CSSProperties =
-      strikeState === 'in'   ? { animation: 'reveal-ltr 1s ease-out forwards', color: '#9ca3af' } :
-      strikeState === 'done' ? { clipPath: 'inset(0 0% 0 0)', animation: 'none', color: '#9ca3af' } :
-      /* out */                { animation: 'hide-rtl 1s ease-out forwards', color: '#9ca3af' };
-
-    if (inline) {
-      // スマホ: textareaは自動伸縮するためabsolute inset-0だと高さが合わない
-      // flex items-center で垂直中央に揃えた上でテキストを重ねる
-      return (
-        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-          <div className="absolute inset-0 flex items-center px-1">
-            <span className={"relative " + TEXT_CLASS + " " + LEADING_CLASS + " whitespace-pre-wrap break-all"}
-              style={{ color: "transparent" }}>
-              {node.text || " "}
-              <span className={"strike-line " + strikeState} />
-            </span>
-          </div>
-          <div className={"absolute inset-0 flex items-center px-1 overflow-hidden " + TEXT_CLASS + " " + LEADING_CLASS + " whitespace-pre-wrap break-all"}
-            style={animStyle}>
-            {node.text || " "}
-          </div>
-        </div>
-      );
-    }
-
-    // PC: input は absolute inset-0 なので同じ配置で重ねる
-    return (
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-        <span className={"relative whitespace-pre " + TEXT_CLASS + " " + LEADING_CLASS + " px-1"}
-          style={{ color: "transparent" }}>
-          {node.text || " "}
-          <span className={"strike-line " + strikeState} />
-        </span>
-        <span
-          className={"absolute inset-0 px-1 overflow-hidden whitespace-pre " + TEXT_CLASS + " " + LEADING_CLASS}
-          style={animStyle}
-        >
-          {node.text || " "}
-        </span>
-      </div>
-    );
-  };
+  // 取り消し線のみ。文字色は transition-colors で変化させる。
+  // オーバーレイテキストはズレるため使わない。
+  const strikeOverlay = (inline: boolean) => strikeState ? (
+    <span
+      className={"pointer-events-none absolute inset-0 overflow-hidden " + (inline ? "flex items-start" : "")}
+      aria-hidden
+    >
+      {/* 透明テキストで取り消し線の位置を決める */}
+      <span
+        className={"relative px-1 " + TEXT_CLASS + " " + LEADING_CLASS + " " + (inline ? "whitespace-pre-wrap break-all" : "whitespace-pre")}
+        style={{ color: "transparent" }}
+      >
+        {node.text || "\u00A0"}
+        <span className={"strike-line " + strikeState} />
+      </span>
+    </span>
+  ) : null;
 
   return (
     <div className="mb-0.5">
@@ -476,7 +449,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                 placeholder="タスクを入力"
                 className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                   ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                  ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                  transition-colors duration-1000 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
               />
               {strikeOverlay(false)}
             </div>
@@ -536,7 +509,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                     style={{ resize: 'none', overflow: 'hidden' }}
                     className={`w-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                      ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                      transition-colors duration-1000 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
                   {strikeOverlay(true)}
                 </div>
