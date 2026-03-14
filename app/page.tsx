@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useReducer, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Circle, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, AlignJustify, Type, List, CircleDot, CircleCheck } from 'lucide-react';
+import { Circle, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, List, CircleDot, CircleCheck } from 'lucide-react';
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged, User, updateProfile,
@@ -17,24 +17,14 @@ interface OutlineNode {
   isCollapsed: boolean; isCompleted: boolean; children: string[]; parent: string;
 }
 interface NodesMap { [key: string]: OutlineNode | { id: string; children: string[]; parent: null }; }
-type FontSize = 'sm' | 'md' | 'lg';
-type LineSpacing = 'compact' | 'normal' | 'relaxed';
 interface ToastItem { id: string; nodeId: string; nodeText: string; snapshot: NodesMap; timer: ReturnType<typeof setTimeout>; remaining: number; startTime: number; }
 
-// フォントサイズごとのクラス定義（テキスト + 行間）
-const fontConfig: Record<FontSize, { text: string; leading: string; py: string }> = {
-  sm:  { text: 'text-sm',                  leading: 'leading-5',  py: 'py-1'   },
-  md:  { text: 'text-[15px] sm:text-base', leading: 'leading-6',  py: 'py-1.5' },
-  lg:  { text: 'text-lg sm:text-xl',       leading: 'leading-8',  py: 'py-2'   },
-};
-
-// 行間設定（ルートレベルのタスク間マージン）
-// pt（上padding）で行間を表現: バレット列のflex-1が子コンテナ全体をカバーできる
-const lineSpacingConfig: Record<LineSpacing, string> = {
-  compact: 'pt-0',
-  normal:  'pt-1',
-  relaxed: 'pt-2',
-};
+// 固定スタイル定数
+const TEXT_CLASS = 'text-[15px] sm:text-base';
+const LEADING_CLASS = 'leading-6';
+const PY_CLASS = 'py-1.5';
+// 日付エリアの固定幅（全階層で右端を揃える）
+const DATE_W = 'w-[270px]';
 
 const createNode = (overrides: Partial<OutlineNode> = {}): OutlineNode => ({
   id: generateId(), text: '', startDate: '', endDate: '',
@@ -196,7 +186,7 @@ function AuthScreen() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Outliner</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Outliner</h1>
           <p className="text-gray-500 mt-2 text-sm">タスクをアウトライン形式で管理</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
@@ -215,7 +205,7 @@ function AuthScreen() {
                 <div className="relative">
                   <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="山田 太郎"
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition" />
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-transparent transition" />
                 </div>
               </div>
             )}
@@ -224,7 +214,7 @@ function AuthScreen() {
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="example@email.com" required
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition" />
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-transparent transition" />
               </div>
             </div>
             <div>
@@ -233,7 +223,7 @@ function AuthScreen() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
                   placeholder={mode === 'register' ? '6文字以上' : 'パスワード'} required
-                  className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition" />
+                  className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-transparent transition" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -242,7 +232,7 @@ function AuthScreen() {
             </div>
             {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3">{error}</div>}
             <button type="submit" disabled={loading}
-              className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-medium rounded-lg text-sm transition-colors flex items-center justify-center gap-2">
+              className="w-full py-2.5 bg-gray-800 hover:bg-gray-900 disabled:bg-gray-300 text-white font-medium rounded-lg text-sm transition-colors flex items-center justify-center gap-2">
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {mode === 'login' ? 'ログイン' : 'アカウントを作成'}
             </button>
@@ -257,18 +247,19 @@ function AuthScreen() {
 interface TreeItemProps {
   id: string; nodes: NodesMap; dispatch: React.Dispatch<Action>;
   focusId: string | null; matched: Set<string>; isFiltering: boolean; searchQuery: string;
-  fontSize: FontSize; lineSpacing: LineSpacing; onDeleteRequest: (id: string, snapshot: NodesMap) => void;
+  onDeleteRequest: (id: string, snapshot: NodesMap) => void;
 }
 
-const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFiltering, searchQuery, fontSize, lineSpacing, onDeleteRequest }: TreeItemProps) => {
+const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFiltering, searchQuery, onDeleteRequest }: TreeItemProps) => {
   const node = nodes[id] as OutlineNode;
   const mobileInputRef = useRef<HTMLTextAreaElement>(null);
   const desktopInputRef = useRef<HTMLInputElement>(null);
   const startDateRef = useRef<HTMLInputElement>(null);
   const endDateRef = useRef<HTMLInputElement>(null);
   const [selfHovered, setSelfHovered] = useState(false);
-  // 取り消し線の状態: 'completed' | 'uncompleting' | null
-  // strikeState: 'in'=完了アニメ中, 'done'=完了済み静止, 'out'=取消アニメ中, null=非表示
+
+  // 取り消し線アニメーション状態
+  // 'in'=完了アニメ中(左→右), 'done'=完了済み静止, 'out'=取消アニメ中(右→左), null=非表示
   const [strikeState, setStrikeState] = useState<'in' | 'done' | 'out' | null>(
     node.isCompleted ? 'done' : null
   );
@@ -290,17 +281,13 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
 
   useEffect(() => {
     if (focusId !== id) return;
-    // 画面幅でスマホ/PCを判定してフォーカス先を選ぶ
-    const isMobile = window.innerWidth < 640; // sm breakpoint
+    const isMobile = window.innerWidth < 640;
     const el = isMobile ? mobileInputRef.current : desktopInputRef.current;
     if (!el) return;
     const tryFocus = (attempts = 0) => {
       if (el.isConnected) {
         el.focus();
-        try {
-          const len = el.value.length;
-          el.setSelectionRange(len, len);
-        } catch {}
+        try { const len = el.value.length; el.setSelectionRange(len, len); } catch {}
         el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       } else if (attempts < 8) {
         requestAnimationFrame(() => tryFocus(attempts + 1));
@@ -313,11 +300,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
 
   const hasChildren = node.children.length > 0;
   const isExpanded = isFiltering ? true : !node.isCollapsed;
-  const isHighlighted = searchQuery && node.text.toLowerCase().includes(searchQuery.toLowerCase());
+  const isHighlighted = !!(searchQuery && node.text.toLowerCase().includes(searchQuery.toLowerCase()));
   const hasDates = !!(node.startDate || node.endDate);
   const isFocused = focusId === id;
-
-  const { text: textClass, leading: leadingClass, py: pyClass } = fontConfig[fontSize];
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.nativeEvent.isComposing) return;
@@ -325,12 +310,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     else if (e.key === 'Enter') {
       e.preventDefault();
       const pos = (e.target as HTMLInputElement | HTMLTextAreaElement).selectionStart ?? 0;
-      if (pos === 0 && node.text.length > 0) {
-        // カーソルが先頭かつテキストあり → 上に追加
-        dispatch({ type: 'ADD_NODE_BEFORE', beforeId: id });
-      } else {
-        dispatch({ type: 'ADD_NODE', afterId: id });
-      }
+      if (pos === 0 && node.text.length > 0) { dispatch({ type: 'ADD_NODE_BEFORE', beforeId: id }); }
+      else { dispatch({ type: 'ADD_NODE', afterId: id }); }
     }
     else if (e.key === 'Backspace') {
       const el = (e.target as HTMLInputElement | HTMLTextAreaElement);
@@ -346,60 +327,36 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     onDeleteRequest(id, snapshot);
   };
 
-  // カレンダーアイコンクリック → 開始日ピッカーを開く
-  const handleCalendarIconClick = () => {
-    setTimeout(() => startDateRef.current?.showPicker?.(), 50);
-  };
+  const handleCalendarIconClick = () => { setTimeout(() => startDateRef.current?.showPicker?.(), 50); };
+  const handleStartDateClick = () => { setTimeout(() => startDateRef.current?.showPicker?.(), 50); };
+  const handleEndDateClick = () => { setTimeout(() => endDateRef.current?.showPicker?.(), 50); };
 
-  // 日付入力クリック → ピッカーを開く
-  const handleStartDateClick = () => {
-    setTimeout(() => startDateRef.current?.showPicker?.(), 50);
-  };
-  const handleEndDateClick = () => {
-    setTimeout(() => endDateRef.current?.showPicker?.(), 50);
-  };
-
-  // カレンダー表示クラス（selfHoveredで判定 → 子ノードに伝播しない）:
-  // hasDates or isFocused → 常時表示
-  // selfHovered（デスクトップ） → 表示
-  // それ以外: スマホ=opacity-30常時表示, デスクトップ=非表示
   const calendarVisibilityClass = hasDates || isFocused || selfHovered
     ? 'opacity-100'
     : 'opacity-30 sm:opacity-0 transition-opacity duration-150';
 
-  // 日付エリアのJSX（PC・スマホ共通パーツ）
+  // 日付エリア（PC・スマホ共通）
   const dateArea = (
     <div className={`flex items-center gap-1 ${calendarVisibilityClass}`}>
-      {/* 開始日 */}
       <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
         <Calendar className="w-3 h-3 text-gray-400 ml-1.5 cursor-pointer flex-shrink-0" onClick={handleCalendarIconClick} />
-        <input
-          ref={startDateRef}
-          type="date"
-          value={node.startDate}
+        <input ref={startDateRef} type="date" value={node.startDate}
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
           onClick={handleStartDateClick}
           className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.startDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
-          title="開始日"
-        />
+          title="開始日" />
         {node.startDate && (
           <button onClick={() => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' })}
             className="px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none" title="開始日を削除">×</button>
         )}
       </div>
       <span className="text-gray-300 text-xs flex-shrink-0">–</span>
-      {/* 終了日 */}
       <div className="flex items-center bg-gray-50 rounded-md border border-gray-100 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
-        <input
-          ref={endDateRef}
-          type="date"
-          value={node.endDate}
-          min={node.startDate}
+        <input ref={endDateRef} type="date" value={node.endDate} min={node.startDate}
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
           onClick={handleEndDateClick}
           className={`bg-transparent outline-none cursor-pointer w-[108px] text-xs rounded px-1 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors ${!node.endDate ? 'text-gray-400 opacity-70' : 'text-gray-600'}`}
-          title="終了日"
-        />
+          title="終了日" />
         {node.endDate && (
           <button onClick={() => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' })}
             className="px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none" title="終了日を削除">×</button>
@@ -408,24 +365,29 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     </div>
   );
 
-  const spacingClass = lineSpacingConfig[lineSpacing];
-
-  // バレットボタンの高さ = pyClass のパディング + アイコン高さ
-  // コンテンツ行と同じ py を button 自体に持たせることでズレをなくす
-  const bulletPy = pyClass; // 例: 'py-1', 'py-1.5', 'py-2'
+  // 取り消し線オーバーレイ
+  // visibility:hidden で要素のレイアウトサイズを維持しつつ非表示
+  // → 親の color (text-gray-400) が currentColor として strike-line に継承される
+  const strikeOverlay = (inline: boolean) => strikeState ? (
+    <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden text-gray-400" aria-hidden>
+      <span style={{ visibility: 'hidden' }} className={`relative ${inline ? 'inline-block whitespace-pre-wrap break-all' : 'whitespace-pre'} ${TEXT_CLASS} ${LEADING_CLASS}`}>
+        {node.text || '\u00A0'}
+        <span className={`strike-line ${strikeState}`} />
+      </span>
+    </div>
+  ) : null;
 
   return (
-    <div className={spacingClass}>
+    <div className="mb-0.5">
       <div className="flex flex-row">
 
-        {/* ── バレット列 ──
-            バレットボタン自身に bulletPy を持たせ、
-            コンテンツ行の高さと一致させる。
-            縦線は flex-1 でボタン直下〜子コンテナ末端まで伸びる。 */}
+        {/* バレット列
+            ・バレットボタン自身に PY_CLASS を持たせてコンテンツ行と高さを揃える
+            ・縦線は flex-1 でボタン直下〜子ノードコンテナ末端まで伸びる */}
         <div className="flex flex-col flex-shrink-0 w-7">
           <button
             onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
-            className={`w-5 h-auto mx-1 ${bulletPy} flex items-center justify-center transition-opacity ${node.isCompleted ? 'opacity-40' : ''}`}
+            className={`w-5 mx-1 ${PY_CLASS} flex items-center justify-center transition-opacity ${node.isCompleted ? 'opacity-40' : ''}`}
             title={node.isCompleted ? '未完了にする' : '完了にする'}
           >
             {node.isCompleted
@@ -437,19 +399,19 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
           )}
         </div>
 
-        {/* ── コンテンツ列 ── */}
+        {/* コンテンツ列 */}
         <div className="flex-1 min-w-0">
 
-          {/* PC レイアウト */}
+          {/* PC レイアウト: flex-row でリーダー線・日付・ゴミ箱を横並び */}
           <div
             className="hidden sm:flex sm:flex-row sm:items-center"
             onMouseEnter={() => setSelfHovered(true)}
             onMouseLeave={() => setSelfHovered(false)}
           >
-            {/* テキスト（幅可変） */}
+            {/* テキスト（幅可変・inline-block サイズ計算） */}
             <div className={`relative flex-shrink overflow-hidden min-w-[20px] transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
-              {/* サイジング用の透明スペーサー */}
-              <span className={`invisible whitespace-pre block px-1 ${bulletPy} ${textClass} ${leadingClass} pointer-events-none`}>
+              {/* 幅計算用スペーサー：PY_CLASS + テキストクラスでバレットと高さを揃える */}
+              <span className={`invisible whitespace-pre block px-1 ${PY_CLASS} ${TEXT_CLASS} ${LEADING_CLASS} pointer-events-none`}>
                 {node.text || 'タスクを入力'}
               </span>
               <input
@@ -459,35 +421,24 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                 onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
                 onKeyDown={handleKeyDown}
                 placeholder="タスクを入力"
-                className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${textClass} ${leadingClass}
+                className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                   ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                   ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
               />
-              {/* 取り消し線（visibility:hidden でレイアウト維持 → currentColor が有効） */}
-              {strikeState && (
-                <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden text-gray-400" aria-hidden>
-                  <span style={{ visibility: 'hidden' }} className={`relative whitespace-pre ${textClass}`}>
-                    {node.text || '\u00A0'}
-                    <span className={`strike-line ${strikeState}`} />
-                  </span>
-                </div>
-              )}
+              {strikeOverlay(false)}
             </div>
 
             {/* リーダー線 */}
             <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mx-2 min-w-[12px]" />
 
-            {/* 日付エリア（flex-shrink-0 で幅を固定） */}
-            <div className={`flex-shrink-0 transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
+            {/* 日付エリア：固定幅で全階層の右端を揃える */}
+            <div className={`flex-shrink-0 ${DATE_W} flex justify-start transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
               {dateArea}
             </div>
 
             {/* ゴミ箱 */}
-            <button
-              onClick={handleDeleteClick}
-              title="削除"
-              className={`flex-shrink-0 ml-1.5 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors ${selfHovered ? 'opacity-100' : 'opacity-0'}`}
-            >
+            <button onClick={handleDeleteClick} title="削除"
+              className={`flex-shrink-0 ml-1.5 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors ${selfHovered ? 'opacity-100' : 'opacity-0'}`}>
               <Trash2 size={13} />
             </button>
           </div>
@@ -525,19 +476,11 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                     onKeyDown={handleKeyDown}
                     placeholder="タスクを入力"
                     style={{ resize: 'none', overflow: 'hidden' }}
-                    className={`w-full bg-transparent outline-none px-1 ${textClass} ${leadingClass}
+                    className={`w-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                       ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
-                  {/* 取り消し線（スマホ） */}
-                  {strikeState && (
-                    <div className="pointer-events-none absolute inset-0 px-1 overflow-hidden text-gray-400" aria-hidden>
-                      <span style={{ visibility: 'hidden' }} className={`relative inline-block ${textClass} ${leadingClass} whitespace-pre-wrap break-all`}>
-                        {node.text || '\u00A0'}
-                        <span className={`strike-line ${strikeState}`} />
-                      </span>
-                    </div>
-                  )}
+                  {strikeOverlay(true)}
                 </div>
               </div>
               <button onClick={handleDeleteClick} title="削除"
@@ -565,20 +508,16 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                   matched={matched}
                   isFiltering={isFiltering}
                   searchQuery={searchQuery}
-                  fontSize={fontSize}
-                  lineSpacing={lineSpacing}
                   onDeleteRequest={onDeleteRequest}
                 />
               ))}
             </div>
           )}
         </div>
-
       </div>
     </div>
   );
 });
-
 TreeItem.displayName = 'TreeItem';
 
 // --- 元に戻すトースト ---
@@ -605,14 +544,14 @@ function UndoToast({ toasts, onUndo, onDismiss }: {
             <div className="flex-1 min-w-0">
               <p className="text-sm truncate">「{toast.nodeText || '(空のタスク)'}」を削除しました</p>
               <div className="mt-1.5 h-1 bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-400 rounded-full" style={{ width: `${progress * 100}%`, transition: 'none' }} />
+                <div className="h-full bg-gray-400 rounded-full" style={{ width: `${progress * 100}%`, transition: 'none' }} />
               </div>
             </div>
             <button onClick={() => onUndo(toast)}
-              className="flex-shrink-0 flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
+              className="flex-shrink-0 flex items-center gap-1 text-gray-300 hover:text-white text-sm font-medium transition-colors">
               <RotateCcw size={14} /> 元に戻す
             </button>
-            <button onClick={() => onDismiss(toast.id)} className="flex-shrink-0 text-gray-400 hover:text-white transition-colors text-lg leading-none">×</button>
+            <button onClick={() => onDismiss(toast.id)} className="flex-shrink-0 text-gray-500 hover:text-white transition-colors text-lg leading-none">×</button>
           </div>
         );
       })}
@@ -627,12 +566,10 @@ function OutlinerApp({ user }: { user: User }) {
   const [filterMode, setFilterMode] = useState('ALL');
   const [title, setTitle] = useState('My Outline');
   const [isLoaded, setIsLoaded] = useState(false);
-  const [fontSize, setFontSize] = useState<FontSize>('md');
-  const [lineSpacing, setLineSpacing] = useState<LineSpacing>('normal');
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const prevDataRef = useRef({ nodes: initialState.nodes, title: 'My Outline', fontSize: 'md' as FontSize, filterMode: 'ALL', lineSpacing: 'normal' as LineSpacing });
+  const prevDataRef = useRef({ nodes: initialState.nodes, title: 'My Outline', filterMode: 'ALL' });
 
-  // Firestoreからロード（ノード・タイトル・設定）
+  // Firestoreからロード
   useEffect(() => {
     const docRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'outline', 'main');
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
@@ -640,20 +577,16 @@ function OutlinerApp({ user }: { user: User }) {
         const d = docSnap.data();
         const rn = d.nodes || initialNodes;
         const rt = d.title || 'My Outline';
-        const rf = (d.fontSize as FontSize) || 'md';
         const rm = d.filterMode || 'ALL';
-        const rl = (d.lineSpacing as LineSpacing) || 'normal';
         const prev = prevDataRef.current;
         if (JSON.stringify(rn) !== JSON.stringify(prev.nodes) || rt !== prev.title) {
           dispatch({ type: 'SET_NODES', nodes: rn });
           setTitle(rt);
         }
-        if (rf !== prev.fontSize) setFontSize(rf);
         if (rm !== prev.filterMode) setFilterMode(rm);
-        if (rl !== prev.lineSpacing) setLineSpacing(rl);
-        prevDataRef.current = { nodes: rn, title: rt, fontSize: rf, filterMode: rm, lineSpacing: rl };
+        prevDataRef.current = { nodes: rn, title: rt, filterMode: rm };
       } else {
-        setDoc(docRef, { nodes: initialNodes, title: 'My Outline', fontSize: 'md', filterMode: 'ALL', lineSpacing: 'normal' });
+        setDoc(docRef, { nodes: initialNodes, title: 'My Outline', filterMode: 'ALL' });
       }
       setIsLoaded(true);
     }, () => setIsLoaded(true));
@@ -667,18 +600,16 @@ function OutlinerApp({ user }: { user: User }) {
     if (
       JSON.stringify(state.nodes) !== JSON.stringify(prev.nodes) ||
       title !== prev.title ||
-      fontSize !== prev.fontSize ||
-      filterMode !== prev.filterMode ||
-      lineSpacing !== prev.lineSpacing
+      filterMode !== prev.filterMode
     ) {
-      prevDataRef.current = { nodes: state.nodes, title, fontSize, filterMode, lineSpacing };
+      prevDataRef.current = { nodes: state.nodes, title, filterMode };
       setDoc(
         doc(db, 'artifacts', APP_ID, 'users', user.uid, 'outline', 'main'),
-        { nodes: state.nodes, title, fontSize, filterMode, lineSpacing },
+        { nodes: state.nodes, title, filterMode },
         { merge: true }
       );
     }
-  }, [state.nodes, title, fontSize, filterMode, lineSpacing, user, isLoaded]);
+  }, [state.nodes, title, filterMode, user, isLoaded]);
 
   const handleDeleteRequest = useCallback((nodeId: string, snapshot: NodesMap) => {
     const node = snapshot[nodeId] as OutlineNode;
@@ -712,36 +643,25 @@ function OutlinerApp({ user }: { user: User }) {
       <header className="sticky top-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 shadow-sm">
         <div className="w-full max-w-5xl mx-auto px-3 py-2 flex flex-col gap-2">
 
-          {/* 1行目：アイコン ＋ 検索バー ＋ ログアウト */}
+          {/* 1行目：アイコン ＋ 検索バー ＋ メール ＋ ログアウト */}
           <div className="flex items-center gap-2">
-            {/* アプリアイコン */}
             <img src="/icon-192.png" alt="Outliner" className="w-7 h-7 rounded-lg border border-gray-200 flex-shrink-0" />
             <div className="flex-1 flex items-center bg-gray-100 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-gray-300 transition-shadow">
               <Search className="w-3.5 h-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
-              <input
-                type="text"
-                placeholder="検索..."
-                className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
+              <input type="text" placeholder="検索..." className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
+                value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
             </div>
-            {/* メールアドレス（PCのみ表示） */}
             <span className="text-sm text-gray-500 hidden sm:block max-w-[220px] truncate flex-shrink-0" title={user.email || ''}>
               {user.email}
             </span>
-            <button
-              onClick={() => signOut(auth)}
-              title="ログアウト"
-              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-            >
+            <button onClick={() => signOut(auth)} title="ログアウト"
+              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0">
               <LogOut className="w-4 h-4" />
             </button>
           </div>
 
-          {/* 2行目：フィルター ＋ 文字サイズ ＋ 行間 ＋ リロード */}
+          {/* 2行目：フィルター ＋ リロード */}
           <div className="flex items-center gap-2">
-            {/* フィルター：アイコンボタン */}
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg">
               <button onClick={() => setFilterMode('ALL')} title="すべて"
                 className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'ALL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
@@ -757,34 +677,8 @@ function OutlinerApp({ user }: { user: User }) {
               </button>
             </div>
 
-            {/* 文字サイズ */}
-            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg" title="文字サイズ">
-              <Type className="w-3 h-3 text-gray-400 mx-1" />
-              {(['sm', 'md', 'lg'] as FontSize[]).map((s) => (
-                <button key={s} onClick={() => setFontSize(s)}
-                  className={`w-6 h-6 text-xs font-medium rounded-md transition-all ${fontSize === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                  {s === 'sm' ? 'S' : s === 'md' ? 'M' : 'L'}
-                </button>
-              ))}
-            </div>
-
-            {/* 行間 */}
-            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg" title="行間">
-              <AlignJustify className="w-3 h-3 text-gray-400 mx-1" />
-              {(['compact', 'normal', 'relaxed'] as LineSpacing[]).map((s) => (
-                <button key={s} onClick={() => setLineSpacing(s)}
-                  className={`w-6 h-6 text-xs font-medium rounded-md transition-all ${lineSpacing === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                  {s === 'compact' ? 'S' : s === 'normal' ? 'M' : 'L'}
-                </button>
-              ))}
-            </div>
-
-            {/* リロード */}
-            <button
-              onClick={() => window.location.reload()}
-              title="再読み込み"
-              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            >
+            <button onClick={() => window.location.reload()} title="再読み込み"
+              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -794,7 +688,6 @@ function OutlinerApp({ user }: { user: User }) {
 
       <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-8 pb-24">
         <div className="sm:min-w-[700px] pr-2 sm:pr-4">
-
           <div className="tree-root">
             {(state.nodes['root'] as OutlineNode).children.map((id: string) => (
               <TreeItem
@@ -806,8 +699,6 @@ function OutlinerApp({ user }: { user: User }) {
                 matched={matched}
                 isFiltering={isFiltering}
                 searchQuery={searchQuery}
-                fontSize={fontSize}
-                lineSpacing={lineSpacing}
                 onDeleteRequest={handleDeleteRequest}
               />
             ))}
