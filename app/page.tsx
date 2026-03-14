@@ -408,33 +408,36 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const spacingClass = lineSpacingConfig[lineSpacing];
 
   return (
-    <div className={`flex flex-row ${spacingClass}`}>
+    <div className={`${spacingClass}`}>
+      <div className="flex flex-row">
 
-      {/* バレット列：コンテンツ列と同じpyを付けて高さを揃える */}
-      <div className={`flex flex-col flex-shrink-0 w-7 ${pyClass}`}>
-        <button
-          onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
-          className={`w-5 h-5 mx-1 flex items-center justify-center flex-shrink-0 transition-opacity ${node.isCompleted ? 'opacity-40' : ''}`}
-          title={node.isCompleted ? '未完了にする' : '完了にする'}
-        >
-          {node.isCompleted
-            ? <CheckCircle size={16} className="text-gray-400" />
-            : <Circle size={16} className="text-gray-400" />}
-        </button>
-        {isExpanded && hasChildren && (
-          <div className="flex-1 border-l border-gray-200 ml-[10px]" />
-        )}
-      </div>
+        {/* バレット列：pyをここで持ち、縦線はボタン直下から子末端まで */}
+        <div className="flex flex-col flex-shrink-0 w-7">
+          <div className={`flex items-center justify-center ${pyClass}`}>
+            <button
+              onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
+              className={`w-5 h-5 flex items-center justify-center flex-shrink-0 transition-opacity ${node.isCompleted ? 'opacity-40' : ''}`}
+              title={node.isCompleted ? '未完了にする' : '完了にする'}
+            >
+              {node.isCompleted
+                ? <CheckCircle size={16} className="text-gray-400" />
+                : <Circle size={16} className="text-gray-400" />}
+            </button>
+          </div>
+          {isExpanded && hasChildren && (
+            <div className="flex-1 border-l border-gray-200 ml-[13px]" />
+          )}
+        </div>
 
-      {/* コンテンツ列 */}
-      <div className="flex-1 min-w-0">
-        <div
-          className={`flex flex-col sm:flex-row sm:items-center gap-0.5`}
-          onMouseEnter={() => setSelfHovered(true)}
-          onMouseLeave={() => setSelfHovered(false)}
-        >
-          <div className="flex items-start flex-1 min-w-0">
-            <div className={`flex-1 min-w-0 transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : 'opacity-100'}`}>
+        {/* コンテンツ列 */}
+        <div className="flex-1 min-w-0">
+          <div
+            className={`flex flex-col sm:flex-row sm:items-center ${pyClass} gap-0.5`}
+            onMouseEnter={() => setSelfHovered(true)}
+            onMouseLeave={() => setSelfHovered(false)}
+          >
+            <div className="flex items-center flex-1 min-w-0">
+              <div className={`flex-1 min-w-0 transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : 'opacity-100'}`}>
 
               {/* スマホ */}
               <div className="sm:hidden">
@@ -480,7 +483,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
               {/* PC */}
               <div className="hidden sm:flex sm:flex-row sm:items-center">
                 <div className="relative flex-shrink overflow-hidden min-w-[20px]">
-                  <span className={`invisible whitespace-pre block px-1 ${pyClass} ${textClass} ${leadingClass} pointer-events-none`}>
+                  <span className={`invisible whitespace-pre block px-1 ${textClass} ${leadingClass} pointer-events-none`}>
                     {node.text || 'タスクを入力'}
                   </span>
                   <input
@@ -504,7 +507,10 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                   )}
                 </div>
                 <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mx-2 min-w-[12px]" />
-                {dateArea}
+                {/* 日付：固定幅で全階層の右端を揃える */}
+                <div className="flex-shrink-0 w-[270px] flex justify-end">
+                  {dateArea}
+                </div>
                 <button onClick={handleDeleteClick} title="削除"
                   className={`flex-shrink-0 ml-1.5 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors ${selfHovered ? 'opacity-100' : 'opacity-0'}`}>
                   <Trash2 size={13} />
@@ -512,17 +518,20 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
               </div>
             </div>
 
+            {/* スマホ: ゴミ箱 */}
             <button onClick={handleDeleteClick} title="削除"
               className="sm:hidden flex-shrink-0 ml-1 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors">
               <Trash2 size={13} />
             </button>
           </div>
 
+          {/* スマホ: 2行目に日付 */}
           <div className="sm:hidden">
             {dateArea}
           </div>
         </div>
 
+        {/* 子ノード */}
         {isExpanded && hasChildren && (
           <div>
             {node.children.map((childId: string) => (
@@ -542,6 +551,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             ))}
           </div>
         )}
+        </div>
       </div>
     </div>
   );
