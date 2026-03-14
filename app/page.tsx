@@ -253,23 +253,31 @@ interface TreeItemProps {
 
 const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFiltering, searchQuery, fontSize, onDeleteRequest }: TreeItemProps) => {
   const node = nodes[id] as OutlineNode;
-  const inputRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
+  const mobileInputRef = useRef<HTMLTextAreaElement>(null);
+  const desktopInputRef = useRef<HTMLInputElement>(null);
   const startDateRef = useRef<HTMLInputElement>(null);
   const endDateRef = useRef<HTMLInputElement>(null);
-  // このノード自身のホバー状態（子への伝播を防ぐためstateで管理）
   const [selfHovered, setSelfHovered] = useState(false);
 
   useEffect(() => {
-    if (focusId === id && inputRef.current) {
-      inputRef.current.focus();
-      setTimeout(() => {
-        if (inputRef.current) {
-          const len = inputRef.current.value.length;
-          try { inputRef.current.setSelectionRange(len, len); } catch {}
-          inputRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        }
-      }, 50);
-    }
+    if (focusId !== id) return;
+    // 画面幅でスマホ/PCを判定してフォーカス先を選ぶ
+    const isMobile = window.innerWidth < 640; // sm breakpoint
+    const el = isMobile ? mobileInputRef.current : desktopInputRef.current;
+    if (!el) return;
+    const tryFocus = (attempts = 0) => {
+      if (el.isConnected) {
+        el.focus();
+        try {
+          const len = el.value.length;
+          el.setSelectionRange(len, len);
+        } catch {}
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } else if (attempts < 8) {
+        requestAnimationFrame(() => tryFocus(attempts + 1));
+      }
+    };
+    requestAnimationFrame(() => tryFocus());
   }, [focusId, id]);
 
   if (isFiltering && !matched.has(id)) return null;
@@ -295,7 +303,10 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         dispatch({ type: 'ADD_NODE', afterId: id });
       }
     }
-    else if (e.key === 'Backspace' && node.text === '' && inputRef.current?.selectionStart === 0) { e.preventDefault(); dispatch({ type: 'DELETE', id }); }
+    else if (e.key === 'Backspace') {
+      const el = (e.target as HTMLInputElement | HTMLTextAreaElement);
+      if (node.text === '' && el.selectionStart === 0) { e.preventDefault(); dispatch({ type: 'DELETE', id }); }
+    }
     else if (e.key === 'ArrowUp') { e.preventDefault(); dispatch({ type: 'MOVE_UP', id }); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); dispatch({ type: 'MOVE_DOWN', id }); }
   };
@@ -406,7 +417,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             {/* スマホ: textareaで改行を確実に検知 */}
             <div className="sm:hidden">
               <textarea
-                ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+                ref={mobileInputRef}
                 value={node.text}
                 rows={1}
                 onChange={e => {
@@ -444,7 +455,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                   {node.text || 'タスクを入力'}
                 </span>
                 <input
-                  ref={inputRef as React.RefObject<HTMLInputElement>}
+                  ref={desktopInputRef}
                   value={node.text}
                   onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
                   onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
