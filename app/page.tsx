@@ -548,19 +548,19 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       <div
         className={`flex flex-row ${draggingId === id ? 'opacity-50' : ''}`}
         data-tree-id={id}
-        draggable
-        onDragStart={e => { e.stopPropagation(); onDragStart(id); }}
-        onDragOver={e => { e.preventDefault(); e.stopPropagation(); onDragOver(id); }}
-        onDragEnd={e => { e.stopPropagation(); onDragEnd(); }}
-        onDrop={e => { e.preventDefault(); e.stopPropagation(); onDrop(id); }}
+        onDragOver={(e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); onDragOver(id); }}
+        onDrop={(e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); onDrop(id); }}
       >
 
-        {/* ドラッグハンドル（全画面・左端） */}
+        {/* ドラッグハンドル（全画面・左端）: draggableはここだけに設定 */}
         <div
           className={`flex-shrink-0 flex items-start justify-center w-4 pt-1 cursor-grab active:cursor-grabbing transition-opacity select-none
             opacity-25 hover:opacity-60 sm:opacity-0 ${selfHovered ? 'sm:opacity-30' : ''}`}
           style={{ touchAction: 'none' }}
           title="ドラッグして並び替え"
+          draggable
+          onDragStart={(e: React.DragEvent) => { e.stopPropagation(); onDragStart(id); }}
+          onDragEnd={(e: React.DragEvent) => { e.stopPropagation(); onDragEnd(); }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
