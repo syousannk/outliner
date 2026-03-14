@@ -908,60 +908,60 @@ function OutlinerApp({ user }: { user: User }) {
           </div>
 
           {/* 2行目：フィルター ＋ 日付フィルター ＋ リロード */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* タスク状態フィルター */}
-            <div className="flex items-center bg-gray-100 p-1 rounded-lg gap-0.5">
+            <div className="flex items-center bg-gray-100 p-0.5 sm:p-1 rounded-lg gap-0.5">
               <button onClick={() => setFilterMode('ALL')} title="すべて"
-                className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${filterMode === 'ALL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
-                <List size={24} />
+                className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-md transition-all ${filterMode === 'ALL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                <List className="w-4 h-4 sm:w-6 sm:h-6" />
               </button>
               <button onClick={() => setFilterMode('ACTIVE')} title="未完了"
-                className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${filterMode === 'ACTIVE' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
-                <CircleDot size={24} />
+                className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-md transition-all ${filterMode === 'ACTIVE' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                <CircleDot className="w-4 h-4 sm:w-6 sm:h-6" />
               </button>
               <button onClick={() => setFilterMode('COMPLETED')} title="完了済み"
-                className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${filterMode === 'COMPLETED' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
-                <CircleCheck size={24} />
+                className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-md transition-all ${filterMode === 'COMPLETED' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                <CircleCheck className="w-4 h-4 sm:w-6 sm:h-6" />
               </button>
             </div>
 
             {/* 開始日フィルター */}
-            <div className="flex items-center bg-gray-100 p-1 rounded-lg gap-0.5" title="開始日">
-              <span className="text-[9px] text-gray-400 px-1.5 font-medium select-none">開始日</span>
+            <div className="flex items-center bg-gray-100 p-0.5 sm:p-1 rounded-lg gap-0.5" title="開始日">
+              <span className="hidden sm:inline text-[9px] text-gray-400 px-1.5 font-medium select-none">開始日</span>
               {([
-                { key: 'START_TODAY',    icon: <CalendarDays size={24} />,   title: '開始: 今日' },
-                { key: 'START_TOMORROW', icon: <CalendarCheck2 size={24} />, title: '開始: 明日' },
-                { key: 'START_OVERDUE',  icon: <CalendarX2 size={24} />,    title: '開始: 期限切れ' },
+                { key: 'START_TODAY',    icon: <CalendarDays className="w-4 h-4 sm:w-6 sm:h-6" />,   title: '開始: 今日' },
+                { key: 'START_TOMORROW', icon: <CalendarCheck2 className="w-4 h-4 sm:w-6 sm:h-6" />, title: '開始: 明日' },
+                { key: 'START_OVERDUE',  icon: <CalendarX2 className="w-4 h-4 sm:w-6 sm:h-6" />,    title: '開始: 期限切れ' },
               ] as const).map(({ key, icon, title }) => (
                 <button key={key}
                   onClick={() => setFilterMode(filterMode === key ? 'ALL' : key)}
                   title={title}
-                  className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                  className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
                   {icon}
                 </button>
               ))}
             </div>
 
             {/* 終了日フィルター */}
-            <div className="flex items-center bg-gray-100 p-1 rounded-lg gap-0.5" title="終了日">
-              <span className="text-[9px] text-gray-400 px-1.5 font-medium select-none">終了日</span>
+            <div className="flex items-center bg-gray-100 p-0.5 sm:p-1 rounded-lg gap-0.5" title="終了日">
+              <span className="hidden sm:inline text-[9px] text-gray-400 px-1.5 font-medium select-none">終了日</span>
               {([
-                { key: 'END_TODAY',    icon: <CalendarDays size={24} />,   title: '終了: 今日' },
-                { key: 'END_TOMORROW', icon: <CalendarCheck2 size={24} />, title: '終了: 明日' },
-                { key: 'END_OVERDUE',  icon: <CalendarX2 size={24} />,    title: '終了: 期限切れ' },
+                { key: 'END_TODAY',    icon: <CalendarDays className="w-4 h-4 sm:w-6 sm:h-6" />,   title: '終了: 今日' },
+                { key: 'END_TOMORROW', icon: <CalendarCheck2 className="w-4 h-4 sm:w-6 sm:h-6" />, title: '終了: 明日' },
+                { key: 'END_OVERDUE',  icon: <CalendarX2 className="w-4 h-4 sm:w-6 sm:h-6" />,    title: '終了: 期限切れ' },
               ] as const).map(({ key, icon, title }) => (
                 <button key={key}
                   onClick={() => setFilterMode(filterMode === key ? 'ALL' : key)}
                   title={title}
-                  className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                  className={`w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
                   {icon}
                 </button>
               ))}
             </div>
 
             <button onClick={() => window.location.reload()} title="再読み込み"
-              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-              <RefreshCw className="w-3.5 h-3.5" />
+              className="p-1 sm:p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+              <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </button>
           </div>
 
