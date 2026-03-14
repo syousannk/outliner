@@ -387,21 +387,29 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         onMouseEnter={() => setSelfHovered(true)}
         onMouseLeave={() => setSelfHovered(false)}
       >
-        {/* 1行目：折りたたみ・バレット・テキスト・(PC時は日付・ゴミ箱もここ) */}
-        <div className="flex items-center flex-1 min-w-0">
+        {/* 1行目：バレット・テキスト・(PC時は日付・ゴミ箱もここ) */}
+        <div className="flex items-start flex-1 min-w-0">
 
-          {/* 完了トグル ＋ バレット */}
-          <button
-            onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
-            className="relative flex-shrink-0 w-5 h-5 mx-1 flex items-center justify-center transition-colors"
-            title={node.isCompleted ? '未完了にする' : '完了にする'}
-          >
-            {node.isCompleted ? (
-              <CheckCircle size={16} className="text-gray-400" />
-            ) : (
-              <Circle size={16} className="text-gray-400" />
+          {/* 完了トグル ＋ バレット
+              縦線はこのボタンの「下」から出す。
+              ボタン自体は items-start で上揃え → 縦線の起点が常にバレット直下になる */}
+          <div className="relative flex-shrink-0 self-start">
+            <button
+              onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
+              className="relative w-5 h-5 mx-1 mt-0.5 flex items-center justify-center transition-colors"
+              title={node.isCompleted ? '未完了にする' : '完了にする'}
+            >
+              {node.isCompleted ? (
+                <CheckCircle size={16} className="text-gray-400" />
+              ) : (
+                <Circle size={16} className="text-gray-400" />
+              )}
+            </button>
+            {/* 縦線：バレットボタンの中心 (mx-1=4px + w-5/2=10px = 14px) から子へ */}
+            {isExpanded && hasChildren && (
+              <div className="absolute left-[14px] top-full w-px bg-gray-200" style={{ bottom: 'calc(-100vh)' }} />
             )}
-          </button>
+          </div>
 
           {/* テキスト入力
               スマホ: 折り返しあり（whitespace-normal, textarea的に高さ可変）
@@ -479,16 +487,16 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
           </button>
         </div>
 
-        {/* スマホ: 2行目に日付を表示（バレット分インデント） */}
-        <div className="sm:hidden pl-12">
+        {/* スマホ: 2行目に日付を表示（バレット幅分インデント） */}
+        <div className="sm:hidden pl-7">
           {dateArea}
         </div>
       </div>
 
-      {/* 子ノード ― 縦線をバレットボタン（w-5 + mx-1左）の中心に合わせる
-          バレット左マージン: mx-1 = 4px、ボタン幅 w-5 = 20px → 中心 = 4 + 10 = 14px */}
+      {/* 子ノード：縦線はバレットのdivから絶対位置で出しているので、
+          ここではボーダーなしで左マージンだけ合わせる */}
       {isExpanded && hasChildren && (
-        <div className="relative ml-[14px] pl-3 border-l border-gray-200">
+        <div className="relative ml-[14px] pl-3">
           {node.children.map((childId: string) => (
             <TreeItem
               key={childId}
@@ -640,7 +648,7 @@ function OutlinerApp({ user }: { user: User }) {
           {/* 1行目：アイコン ＋ 検索バー ＋ ログアウト */}
           <div className="flex items-center gap-2">
             {/* アプリアイコン */}
-            <img src="/icon-192.png" alt="Outliner" className="w-7 h-7 rounded-lg flex-shrink-0" />
+            <img src="/icon-192.png" alt="Outliner" className="w-7 h-7 rounded-lg border border-gray-200 flex-shrink-0" />
             <div className="flex-1 flex items-center bg-gray-100 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-gray-300 transition-shadow">
               <Search className="w-3.5 h-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
               <input
