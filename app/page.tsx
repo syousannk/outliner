@@ -253,7 +253,7 @@ interface TreeItemProps {
 
 const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFiltering, searchQuery, fontSize, onDeleteRequest }: TreeItemProps) => {
   const node = nodes[id] as OutlineNode;
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
   const startDateRef = useRef<HTMLInputElement>(null);
   const endDateRef = useRef<HTMLInputElement>(null);
   // このノード自身のホバー状態（子への伝播を防ぐためstateで管理）
@@ -265,10 +265,10 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       setTimeout(() => {
         if (inputRef.current) {
           const len = inputRef.current.value.length;
-          inputRef.current.setSelectionRange(len, len);
+          try { inputRef.current.setSelectionRange(len, len); } catch {}
           inputRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
-      }, 0);
+      }, 50);
     }
   }, [focusId, id]);
 
@@ -282,12 +282,12 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
 
   const { text: textClass, leading: leadingClass, py: pyClass } = fontConfig[fontSize];
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.nativeEvent.isComposing) return;
     if (e.key === 'Tab') { e.preventDefault(); dispatch({ type: e.shiftKey ? 'UNINDENT' : 'INDENT', id }); }
     else if (e.key === 'Enter') {
       e.preventDefault();
-      const pos = (e.target as HTMLInputElement).selectionStart ?? 0;
+      const pos = (e.target as HTMLInputElement | HTMLTextAreaElement).selectionStart ?? 0;
       if (pos === 0 && node.text.length > 0) {
         // カーソルが先頭かつテキストあり → 上に追加
         dispatch({ type: 'ADD_NODE_BEFORE', beforeId: id });
@@ -403,18 +403,37 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
               PC:     1行・リーダー線あり */}
           <div className={`flex-1 min-w-0 transition-all duration-300 ${node.isCompleted ? 'opacity-40 grayscale' : 'opacity-100'}`}>
 
-            {/* スマホ: テキストを折り返し表示 */}
+            {/* スマホ: textareaで改行を確実に検知 */}
             <div className="sm:hidden">
-              <input
-                ref={inputRef}
+              <textarea
+                ref={inputRef as React.RefObject<HTMLTextAreaElement>}
                 value={node.text}
-                onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
+                rows={1}
+                onChange={e => {
+                  const val = e.target.value;
+                  // 改行文字が含まれたら新規タスク追加
+                  if (val.includes('\n')) {
+                    const pos = e.target.selectionStart - 1; // 改行前のカーソル位置
+                    const textBefore = val.slice(0, val.indexOf('\n'));
+                    if (pos === 0 && node.text.length > 0) {
+                      // 先頭で改行 → 上に追加（テキストは現状維持）
+                      dispatch({ type: 'ADD_NODE_BEFORE', beforeId: id });
+                    } else {
+                      // 通常改行 → 下に追加
+                      dispatch({ type: 'UPDATE_TEXT', id, text: textBefore });
+                      dispatch({ type: 'ADD_NODE', afterId: id });
+                    }
+                    return;
+                  }
+                  dispatch({ type: 'UPDATE_TEXT', id, text: val });
+                }}
                 onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
                 onKeyDown={handleKeyDown}
                 placeholder="タスクを入力"
+                style={{ resize: 'none', overflow: 'hidden' }}
                 className={`w-full bg-transparent outline-none px-1 ${textClass} ${leadingClass} transition-colors duration-300
                   ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                  ${node.isCompleted ? 'text-gray-500 line-through' : 'text-gray-900'}`}
+                  ${node.isCompleted ? 'text-gray-500 line-through' : ''}`}
               />
             </div>
 
@@ -425,7 +444,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                   {node.text || 'タスクを入力'}
                 </span>
                 <input
-                  ref={inputRef}
+                  ref={inputRef as React.RefObject<HTMLInputElement>}
                   value={node.text}
                   onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
                   onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
