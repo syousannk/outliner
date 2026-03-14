@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useReducer, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Circle, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, AlignJustify, Type } from 'lucide-react';
+import { Circle, Search, Calendar, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, AlignJustify, Type, List, CircleDot, CircleCheck } from 'lucide-react';
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged, User, updateProfile,
@@ -29,10 +29,11 @@ const fontConfig: Record<FontSize, { text: string; leading: string; py: string }
 };
 
 // 行間設定（ルートレベルのタスク間マージン）
+// pt（上padding）で行間を表現: バレット列のflex-1が子コンテナ全体をカバーできる
 const lineSpacingConfig: Record<LineSpacing, string> = {
-  compact: 'mb-0',
-  normal:  'mb-1',
-  relaxed: 'mb-2.5',
+  compact: 'pt-0',
+  normal:  'pt-1',
+  relaxed: 'pt-2',
 };
 
 const createNode = (overrides: Partial<OutlineNode> = {}): OutlineNode => ({
@@ -267,19 +268,21 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const endDateRef = useRef<HTMLInputElement>(null);
   const [selfHovered, setSelfHovered] = useState(false);
   // 取り消し線の状態: 'completed' | 'uncompleting' | null
-  const [strikeState, setStrikeState] = useState<'completed' | 'uncompleting' | null>(
-    node.isCompleted ? 'completed' : null
+  // strikeState: 'in'=完了アニメ中, 'done'=完了済み静止, 'out'=取消アニメ中, null=非表示
+  const [strikeState, setStrikeState] = useState<'in' | 'done' | 'out' | null>(
+    node.isCompleted ? 'done' : null
   );
   const prevCompleted = useRef(node.isCompleted);
 
-  // isCompletedの変化を検知してアニメーション状態を切り替える
   useEffect(() => {
     if (node.isCompleted === prevCompleted.current) return;
     prevCompleted.current = node.isCompleted;
     if (node.isCompleted) {
-      setStrikeState('completed');
+      setStrikeState('in');
+      const t = setTimeout(() => setStrikeState('done'), 300);
+      return () => clearTimeout(t);
     } else {
-      setStrikeState('uncompleting');
+      setStrikeState('out');
       const t = setTimeout(() => setStrikeState(null), 300);
       return () => clearTimeout(t);
     }
@@ -407,16 +410,25 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
 
   const spacingClass = lineSpacingConfig[lineSpacing];
 
+  // PC用: 日付エリアの固定幅（全階層で右端を揃える）
+  const DATE_AREA_WIDTH = 280; // px
+
   return (
-    <div className={`${spacingClass}`}>
+    // pt でスペーシング: バレット列(flex-1)が子コンテナ全体をカバーできる
+    <div className={spacingClass}>
       <div className="flex flex-row">
 
-        {/* バレット列：pyをここで持ち、縦線はボタン直下から子末端まで */}
+        {/* ── バレット列 ──
+            バレットボタンの高さはleading+pyで決まる。
+            縦線(flex-1)はボタン直下から子ノードコンテナ末端まで正確に伸びる。
+            spacingClassをptにしているので次の兄弟のptが間隔になり、
+            縦線は子コンテナのpaddingも含めて正確に覆う。 */}
         <div className="flex flex-col flex-shrink-0 w-7">
+          {/* バレットボタン：pyClassで高さをコンテンツ行と揃える */}
           <div className={`flex items-center justify-center ${pyClass}`}>
             <button
               onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
-              className={`w-5 h-5 flex items-center justify-center flex-shrink-0 transition-opacity ${node.isCompleted ? 'opacity-40' : ''}`}
+              className={`w-5 h-5 flex items-center justify-center transition-opacity ${node.isCompleted ? 'opacity-40' : ''}`}
               title={node.isCompleted ? '未完了にする' : '完了にする'}
             >
               {node.isCompleted
@@ -424,23 +436,81 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                 : <Circle size={16} className="text-gray-400" />}
             </button>
           </div>
+          {/* 縦線：子コンテナが存在する間だけ伸びる */}
           {isExpanded && hasChildren && (
             <div className="flex-1 border-l border-gray-200 ml-[13px]" />
           )}
         </div>
 
-        {/* コンテンツ列 */}
+        {/* ── コンテンツ列 ── */}
         <div className="flex-1 min-w-0">
+
+          {/* PC: relative コンテナ。日付は absolute right:0 で全階層右端統一 */}
           <div
-            className={`flex flex-col sm:flex-row sm:items-center ${pyClass} gap-0.5`}
+            className={`hidden sm:block relative ${pyClass}`}
             onMouseEnter={() => setSelfHovered(true)}
             onMouseLeave={() => setSelfHovered(false)}
           >
-            <div className="flex items-center flex-1 min-w-0">
-              <div className={`flex-1 min-w-0 transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : 'opacity-100'}`}>
+            {/* テキスト行（日付幅分のright paddingで日付エリアと重ならない） */}
+            <div
+              className={`transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}
+              style={{ paddingRight: `${DATE_AREA_WIDTH + 32}px` }}
+            >
+              <div className="relative min-w-0 overflow-hidden">
+                <span className={`invisible whitespace-pre block px-1 ${textClass} ${leadingClass} pointer-events-none`}>
+                  {node.text || 'タスクを入力'}
+                </span>
+                <input
+                  ref={desktopInputRef}
+                  value={node.text}
+                  onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
+                  onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
+                  onKeyDown={handleKeyDown}
+                  placeholder="タスクを入力"
+                  className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${textClass} ${leadingClass}
+                    ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
+                    ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                />
+                {/* 取り消し線アニメーション
+                    visibility:hidden でレイアウトを保持しつつ非表示 → currentColorが有効 */}
+                {strikeState && (
+                  <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden text-gray-400" aria-hidden>
+                    <span style={{ visibility: 'hidden' }} className="relative whitespace-pre">
+                      {node.text || '\u00A0'}
+                      <span className={`strike-line ${strikeState}`} />
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
 
-              {/* スマホ */}
-              <div className="sm:hidden">
+            {/* 日付エリア：absolute right:0 + 幅固定 → 全階層で右端が揃う */}
+            <div
+              className={`absolute right-8 top-0 bottom-0 flex items-center transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}
+              style={{ width: `${DATE_AREA_WIDTH}px` }}
+            >
+              {dateArea}
+            </div>
+
+            {/* ゴミ箱 */}
+            <button
+              onClick={handleDeleteClick}
+              title="削除"
+              className={`absolute right-0 top-0 bottom-0 flex items-center p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors ${selfHovered ? 'opacity-100' : 'opacity-0'}`}
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+
+          {/* スマホ */}
+          <div
+            className={`sm:hidden ${pyClass}`}
+            onMouseEnter={() => setSelfHovered(true)}
+            onMouseLeave={() => setSelfHovered(false)}
+          >
+            {/* スマホ1行目: テキスト + ゴミ箱 */}
+            <div className="flex items-center">
+              <div className={`flex-1 min-w-0 transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
                 <div className="relative">
                   <textarea
                     ref={mobileInputRef}
@@ -469,89 +539,51 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                       ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
+                  {/* 取り消し線アニメーション（スマホ） */}
                   {strikeState && (
                     <div className="pointer-events-none absolute inset-0 px-1 overflow-hidden text-gray-400" aria-hidden>
-                      <span className={`relative inline-block opacity-0 ${textClass} ${leadingClass} whitespace-pre-wrap break-all`}>
+                      <span style={{ visibility: 'hidden' }} className={`relative inline-block ${textClass} ${leadingClass} whitespace-pre-wrap break-all`}>
                         {node.text || '\u00A0'}
-                        <span className={`strike-line ${strikeState === 'completed' ? 'in' : 'out'}`} />
+                        <span className={`strike-line ${strikeState}`} />
                       </span>
                     </div>
                   )}
                 </div>
               </div>
-
-              {/* PC */}
-              <div className="hidden sm:flex sm:flex-row sm:items-center">
-                <div className="relative flex-shrink overflow-hidden min-w-[20px]">
-                  <span className={`invisible whitespace-pre block px-1 ${textClass} ${leadingClass} pointer-events-none`}>
-                    {node.text || 'タスクを入力'}
-                  </span>
-                  <input
-                    ref={desktopInputRef}
-                    value={node.text}
-                    onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
-                    onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
-                    onKeyDown={handleKeyDown}
-                    placeholder="タスクを入力"
-                    className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${textClass} ${leadingClass}
-                      ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                      ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
-                  />
-                  {strikeState && (
-                    <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden text-gray-400" aria-hidden>
-                      <span className="relative opacity-0 whitespace-pre">
-                        {node.text || '\u00A0'}
-                        <span className={`strike-line ${strikeState === 'completed' ? 'in' : 'out'}`} />
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mx-2 min-w-[12px]" />
-                {/* 日付：固定幅で全階層の右端を揃える */}
-                <div className="flex-shrink-0 w-[270px] flex justify-end">
-                  {dateArea}
-                </div>
-                <button onClick={handleDeleteClick} title="削除"
-                  className={`flex-shrink-0 ml-1.5 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors ${selfHovered ? 'opacity-100' : 'opacity-0'}`}>
-                  <Trash2 size={13} />
-                </button>
-              </div>
+              <button onClick={handleDeleteClick} title="削除"
+                className="flex-shrink-0 ml-1 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors">
+                <Trash2 size={13} />
+              </button>
             </div>
 
-            {/* スマホ: ゴミ箱 */}
-            <button onClick={handleDeleteClick} title="削除"
-              className="sm:hidden flex-shrink-0 ml-1 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors">
-              <Trash2 size={13} />
-            </button>
+            {/* スマホ2行目: 日付 */}
+            <div className={`mt-0.5 transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
+              {dateArea}
+            </div>
           </div>
 
-          {/* スマホ: 2行目に日付 */}
-          <div className="sm:hidden">
-            {dateArea}
-          </div>
+          {/* 子ノード */}
+          {isExpanded && hasChildren && (
+            <div>
+              {node.children.map((childId: string) => (
+                <TreeItem
+                  key={childId}
+                  id={childId}
+                  nodes={nodes}
+                  dispatch={dispatch}
+                  focusId={focusId}
+                  matched={matched}
+                  isFiltering={isFiltering}
+                  searchQuery={searchQuery}
+                  fontSize={fontSize}
+                  lineSpacing={lineSpacing}
+                  onDeleteRequest={onDeleteRequest}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* 子ノード */}
-        {isExpanded && hasChildren && (
-          <div>
-            {node.children.map((childId: string) => (
-              <TreeItem
-                key={childId}
-                id={childId}
-                nodes={nodes}
-                dispatch={dispatch}
-                focusId={focusId}
-                matched={matched}
-                isFiltering={isFiltering}
-                searchQuery={searchQuery}
-                fontSize={fontSize}
-                lineSpacing={lineSpacing}
-                onDeleteRequest={onDeleteRequest}
-              />
-            ))}
-          </div>
-        )}
-        </div>
       </div>
     </div>
   );
@@ -718,14 +750,20 @@ function OutlinerApp({ user }: { user: User }) {
 
           {/* 2行目：フィルター ＋ 文字サイズ ＋ 行間 ＋ リロード */}
           <div className="flex items-center gap-2">
-            {/* フィルター */}
+            {/* フィルター：アイコンボタン */}
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg">
-              {(['ALL', 'ACTIVE', 'COMPLETED'] as const).map((m) => (
-                <button key={m} onClick={() => setFilterMode(m)}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${filterMode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                  {m === 'ALL' ? 'すべて' : m === 'ACTIVE' ? '未完了' : '完了済み'}
-                </button>
-              ))}
+              <button onClick={() => setFilterMode('ALL')} title="すべて"
+                className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'ALL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                <List size={14} />
+              </button>
+              <button onClick={() => setFilterMode('ACTIVE')} title="未完了"
+                className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'ACTIVE' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                <CircleDot size={14} />
+              </button>
+              <button onClick={() => setFilterMode('COMPLETED')} title="完了済み"
+                className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'COMPLETED' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                <CircleCheck size={14} />
+              </button>
             </div>
 
             {/* 文字サイズ */}
