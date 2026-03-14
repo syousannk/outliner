@@ -810,23 +810,23 @@ function OutlinerApp({ user }: { user: User }) {
           {/* 2行目：フィルター ＋ 日付フィルター ＋ リロード */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* タスク状態フィルター */}
-            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg">
+            <div className="flex items-center bg-gray-100 p-1 rounded-lg gap-0.5">
               <button onClick={() => setFilterMode('ALL')} title="すべて"
-                className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'ALL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${filterMode === 'ALL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
                 <List size={24} />
               </button>
               <button onClick={() => setFilterMode('ACTIVE')} title="未完了"
-                className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'ACTIVE' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${filterMode === 'ACTIVE' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
                 <CircleDot size={24} />
               </button>
               <button onClick={() => setFilterMode('COMPLETED')} title="完了済み"
-                className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === 'COMPLETED' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${filterMode === 'COMPLETED' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
                 <CircleCheck size={24} />
               </button>
             </div>
 
             {/* 開始日フィルター */}
-            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5" title="開始日">
+            <div className="flex items-center bg-gray-100 p-1 rounded-lg gap-0.5" title="開始日">
               <span className="text-[9px] text-gray-400 px-1.5 font-medium select-none">開始日</span>
               {([
                 { key: 'START_TODAY',    icon: <CalendarDays size={24} />,   title: '開始: 今日' },
@@ -836,14 +836,14 @@ function OutlinerApp({ user }: { user: User }) {
                 <button key={key}
                   onClick={() => setFilterMode(filterMode === key ? 'ALL' : key)}
                   title={title}
-                  className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                  className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
                   {icon}
                 </button>
               ))}
             </div>
 
             {/* 終了日フィルター */}
-            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg gap-0.5" title="終了日">
+            <div className="flex items-center bg-gray-100 p-1 rounded-lg gap-0.5" title="終了日">
               <span className="text-[9px] text-gray-400 px-1.5 font-medium select-none">終了日</span>
               {([
                 { key: 'END_TODAY',    icon: <CalendarDays size={24} />,   title: '終了: 今日' },
@@ -853,7 +853,7 @@ function OutlinerApp({ user }: { user: User }) {
                 <button key={key}
                   onClick={() => setFilterMode(filterMode === key ? 'ALL' : key)}
                   title={title}
-                  className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
+                  className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${filterMode === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}>
                   {icon}
                 </button>
               ))}
