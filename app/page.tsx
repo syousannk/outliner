@@ -263,15 +263,13 @@ function AuthScreen() {
 
 // --- スマホ複数行取り消し線コンポーネント ---
 // textareaのDOMから実際の行数を取得し、下→上の順でアニメーション
-function MobileStrikeLines({ text, strikeState, containerRef, textClass, leadingClass }: {
+function MobileStrikeLines({ text, strikeState, containerRef }: {
   text: string;
   strikeState: 'in' | 'done' | 'out';
   containerRef: React.RefObject<HTMLTextAreaElement>;
-  textClass: string;
-  leadingClass: string;
 }) {
   const [lineCount, setLineCount] = useState(1);
-  const lineHeightPx = 20; // leading-5 = 1.25rem = 20px
+  const lineHeightPx = 20; // leading-5 = 20px
 
   useEffect(() => {
     const el = containerRef.current;
@@ -280,37 +278,30 @@ function MobileStrikeLines({ text, strikeState, containerRef, textClass, leading
     setLineCount(count);
   }, [text, containerRef]);
 
-  const delayPerLine = 0.15; // 各行の遅延（秒）
-  const totalDuration = 1; // アニメーション1本の長さ（秒）
+  const perLine = 0.4; // 1行あたりのアニメーション時間（秒）
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
       {Array.from({ length: lineCount }, (_, i) => {
-        // 完了時（in/done）: 下から上 → 下の行(lineCount-1)が先、上の行(0)が後
-        // 取り消し時（out）: 上から下 → 上の行(0)が先、下の行(lineCount-1)が後
-        const delay = strikeState === 'out'
-          ? i * delayPerLine                        // 上→下
-          : (lineCount - 1 - i) * delayPerLine;    // 下→上
-
-        const top = i * lineHeightPx;
-        const animName = strikeState === 'out' ? 'hide-rtl' : 'reveal-ltr';
-        const clipPath = strikeState === 'done' ? 'inset(0 0% 0 0)' : undefined;
+        // 完了時: 下の行(lineCount-1-i)から順に → 行インデックスが大きいほど先
+        // 取消時: 上の行(i=0)から順に → 行インデックスが小さいほど先
+        const lineIdx = strikeState === 'out' ? i : (lineCount - 1 - i);
+        const delay = lineIdx * perLine;
 
         return (
           <div
             key={i}
             style={{
               position: 'absolute',
-              left: 4, // px-1 = 4px
+              left: 4,
               right: 4,
-              top: top + lineHeightPx / 2 - 1,
+              top: i * lineHeightPx + lineHeightPx / 2 - 1,
               height: 1.5,
               backgroundColor: '#9ca3af',
+              clipPath: strikeState === 'done' ? 'inset(0 0% 0 0)' : undefined,
               animation: strikeState !== 'done'
-                ? `${animName} ${totalDuration}s ease-out ${delay}s forwards`
+                ? `${strikeState === 'out' ? 'hide-rtl' : 'reveal-ltr'} ${perLine}s ease-out ${delay}s both`
                 : 'none',
-              clipPath: clipPath,
-              animationFillMode: 'both',
             }}
           />
         );
@@ -595,8 +586,6 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                       text={node.text}
                       strikeState={strikeState}
                       containerRef={mobileInputRef}
-                      textClass={TEXT_CLASS}
-                      leadingClass={LEADING_CLASS}
                     />
                   )}
                 </div>
