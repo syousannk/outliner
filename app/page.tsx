@@ -410,33 +410,28 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
 
   const spacingClass = lineSpacingConfig[lineSpacing];
 
-  // PC用: 日付エリアの固定幅（全階層で右端を揃える）
-  const DATE_AREA_WIDTH = 280; // px
+  // バレットボタンの高さ = pyClass のパディング + アイコン高さ
+  // コンテンツ行と同じ py を button 自体に持たせることでズレをなくす
+  const bulletPy = pyClass; // 例: 'py-1', 'py-1.5', 'py-2'
 
   return (
-    // pt でスペーシング: バレット列(flex-1)が子コンテナ全体をカバーできる
     <div className={spacingClass}>
       <div className="flex flex-row">
 
         {/* ── バレット列 ──
-            バレットボタンの高さはleading+pyで決まる。
-            縦線(flex-1)はボタン直下から子ノードコンテナ末端まで正確に伸びる。
-            spacingClassをptにしているので次の兄弟のptが間隔になり、
-            縦線は子コンテナのpaddingも含めて正確に覆う。 */}
+            バレットボタン自身に bulletPy を持たせ、
+            コンテンツ行の高さと一致させる。
+            縦線は flex-1 でボタン直下〜子コンテナ末端まで伸びる。 */}
         <div className="flex flex-col flex-shrink-0 w-7">
-          {/* バレットボタン：pyClassで高さをコンテンツ行と揃える */}
-          <div className={`flex items-center justify-center ${pyClass}`}>
-            <button
-              onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
-              className={`w-5 h-5 flex items-center justify-center transition-opacity ${node.isCompleted ? 'opacity-40' : ''}`}
-              title={node.isCompleted ? '未完了にする' : '完了にする'}
-            >
-              {node.isCompleted
-                ? <CheckCircle size={16} className="text-gray-400" />
-                : <Circle size={16} className="text-gray-400" />}
-            </button>
-          </div>
-          {/* 縦線：子コンテナが存在する間だけ伸びる */}
+          <button
+            onClick={() => dispatch({ type: 'TOGGLE_COMPLETE', id })}
+            className={`w-5 h-auto mx-1 ${bulletPy} flex items-center justify-center transition-opacity ${node.isCompleted ? 'opacity-40' : ''}`}
+            title={node.isCompleted ? '未完了にする' : '完了にする'}
+          >
+            {node.isCompleted
+              ? <CheckCircle size={16} className="text-gray-400" />
+              : <Circle size={16} className="text-gray-400" />}
+          </button>
           {isExpanded && hasChildren && (
             <div className="flex-1 border-l border-gray-200 ml-[13px]" />
           )}
@@ -445,50 +440,45 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
         {/* ── コンテンツ列 ── */}
         <div className="flex-1 min-w-0">
 
-          {/* PC: relative コンテナ。日付は absolute right:0 で全階層右端統一 */}
+          {/* PC レイアウト */}
           <div
-            className={`hidden sm:block relative ${pyClass}`}
+            className="hidden sm:flex sm:flex-row sm:items-center"
             onMouseEnter={() => setSelfHovered(true)}
             onMouseLeave={() => setSelfHovered(false)}
           >
-            {/* テキスト行（日付幅分のright paddingで日付エリアと重ならない） */}
-            <div
-              className={`transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}
-              style={{ paddingRight: `${DATE_AREA_WIDTH + 32}px` }}
-            >
-              <div className="relative min-w-0 overflow-hidden">
-                <span className={`invisible whitespace-pre block px-1 ${textClass} ${leadingClass} pointer-events-none`}>
-                  {node.text || 'タスクを入力'}
-                </span>
-                <input
-                  ref={desktopInputRef}
-                  value={node.text}
-                  onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
-                  onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
-                  onKeyDown={handleKeyDown}
-                  placeholder="タスクを入力"
-                  className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${textClass} ${leadingClass}
-                    ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                    ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
-                />
-                {/* 取り消し線アニメーション
-                    visibility:hidden でレイアウトを保持しつつ非表示 → currentColorが有効 */}
-                {strikeState && (
-                  <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden text-gray-400" aria-hidden>
-                    <span style={{ visibility: 'hidden' }} className="relative whitespace-pre">
-                      {node.text || '\u00A0'}
-                      <span className={`strike-line ${strikeState}`} />
-                    </span>
-                  </div>
-                )}
-              </div>
+            {/* テキスト（幅可変） */}
+            <div className={`relative flex-shrink overflow-hidden min-w-[20px] transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
+              {/* サイジング用の透明スペーサー */}
+              <span className={`invisible whitespace-pre block px-1 ${bulletPy} ${textClass} ${leadingClass} pointer-events-none`}>
+                {node.text || 'タスクを入力'}
+              </span>
+              <input
+                ref={desktopInputRef}
+                value={node.text}
+                onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
+                onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
+                onKeyDown={handleKeyDown}
+                placeholder="タスクを入力"
+                className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${textClass} ${leadingClass}
+                  ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
+                  ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+              />
+              {/* 取り消し線（visibility:hidden でレイアウト維持 → currentColor が有効） */}
+              {strikeState && (
+                <div className="pointer-events-none absolute inset-0 flex items-center px-1 overflow-hidden text-gray-400" aria-hidden>
+                  <span style={{ visibility: 'hidden' }} className={`relative whitespace-pre ${textClass}`}>
+                    {node.text || '\u00A0'}
+                    <span className={`strike-line ${strikeState}`} />
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* 日付エリア：absolute right:0 + 幅固定 → 全階層で右端が揃う */}
-            <div
-              className={`absolute right-8 top-0 bottom-0 flex items-center transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}
-              style={{ width: `${DATE_AREA_WIDTH}px` }}
-            >
+            {/* リーダー線 */}
+            <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mx-2 min-w-[12px]" />
+
+            {/* 日付エリア（flex-shrink-0 で幅を固定） */}
+            <div className={`flex-shrink-0 transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
               {dateArea}
             </div>
 
@@ -496,19 +486,19 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
             <button
               onClick={handleDeleteClick}
               title="削除"
-              className={`absolute right-0 top-0 bottom-0 flex items-center p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors ${selfHovered ? 'opacity-100' : 'opacity-0'}`}
+              className={`flex-shrink-0 ml-1.5 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors ${selfHovered ? 'opacity-100' : 'opacity-0'}`}
             >
               <Trash2 size={13} />
             </button>
           </div>
 
-          {/* スマホ */}
+          {/* スマホ レイアウト */}
           <div
-            className={`sm:hidden ${pyClass}`}
+            className="sm:hidden"
             onMouseEnter={() => setSelfHovered(true)}
             onMouseLeave={() => setSelfHovered(false)}
           >
-            {/* スマホ1行目: テキスト + ゴミ箱 */}
+            {/* 1行目: テキスト + ゴミ箱 */}
             <div className="flex items-center">
               <div className={`flex-1 min-w-0 transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
                 <div className="relative">
@@ -539,7 +529,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
                       ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
                   />
-                  {/* 取り消し線アニメーション（スマホ） */}
+                  {/* 取り消し線（スマホ） */}
                   {strikeState && (
                     <div className="pointer-events-none absolute inset-0 px-1 overflow-hidden text-gray-400" aria-hidden>
                       <span style={{ visibility: 'hidden' }} className={`relative inline-block ${textClass} ${leadingClass} whitespace-pre-wrap break-all`}>
@@ -556,7 +546,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
               </button>
             </div>
 
-            {/* スマホ2行目: 日付 */}
+            {/* 2行目: 日付 */}
             <div className={`mt-0.5 transition-opacity duration-300 ${node.isCompleted ? 'opacity-40' : ''}`}>
               {dateArea}
             </div>
@@ -588,6 +578,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     </div>
   );
 });
+
 TreeItem.displayName = 'TreeItem';
 
 // --- 元に戻すトースト ---
