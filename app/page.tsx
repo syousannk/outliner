@@ -690,7 +690,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
           >
             {/* 1行目: テキスト + インデントボタン + ゴミ箱 */}
             <div className="flex items-center">
-              <div className={`flex-1 min-w-0 transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''}`}>
+              <div className="flex-1 min-w-0">
                 <div className="relative">
                   <input
                     ref={mobileInputRef}
@@ -703,12 +703,15 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                     style={{ overflowX: 'auto' }}
                     className={`w-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS} ${PY_CLASS}
                       ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                      transition-colors duration-1000 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
+                      transition-[color,opacity] duration-500 ${node.isCompleted ? 'text-gray-400 opacity-40' : 'text-gray-900'}`}
                   />
-                  {/* 取り消し線（シンプルな一本線） */}
+                  {/* 取り消し線: デスクトップ同様テキスト幅のspanに重ねて描画 */}
                   {strikeState && (
                     <div className="pointer-events-none absolute inset-0 flex items-center px-1" aria-hidden>
-                      <div className="w-full h-px bg-gray-400" />
+                      <span className={`relative whitespace-pre ${TEXT_CLASS} ${LEADING_CLASS}`} style={{ color: 'transparent' }}>
+                        {node.text || '\u00A0'}
+                        {strikeLine}
+                      </span>
                     </div>
                   )}
                 </div>
