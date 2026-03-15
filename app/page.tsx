@@ -441,8 +441,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const showDateArea = hasDates || isFocused || selfHovered;
   // PC用: ホバー/フォーカス/日付あり時のみ表示。完了済みは opacity-40 で表示
   const pcDateClass = showDateArea ? (node.isCompleted ? 'opacity-40' : 'opacity-100') : 'opacity-0';
-  // スマホ用: 常時表示・常に opacity-100
-  const mobileDateClass = 'opacity-100';
+
 
   // 日付エリア（PC・スマホ共通）
   // ×ボタンは常時レンダリング（日付なし時は invisible）して幅を確保しズレを防ぐ
@@ -736,12 +735,12 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
               </button>
             </div>
 
-            {/* 2行目: 日付（コンパクト表示） */}
-            <div className="mt-0.5 pb-1">
-              <div className={`transition-opacity duration-150 ${mobileDateClass}`}>
+            {/* 2行目: 日付（コンパクト表示）: 完了済みは非表示 */}
+            {!node.isCompleted && (
+              <div className="mt-0.5 pb-1">
                 {mobileDateArea}
               </div>
-            </div>
+            )}
           </div>
 
           {/* 子ノード */}
