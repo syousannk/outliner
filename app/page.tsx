@@ -510,8 +510,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       <span className="text-gray-400 flex-shrink-0">開始</span>
       {/* relative コンテナ: span(28px) + ml-4(16px) + ×ボタン(~14px) = ~58px */}
       <div className="relative flex items-center">
-        <span className={`block min-w-[28px] px-0.5 text-center ${node.startDate ? 'text-gray-600' : 'text-gray-300'}`}>
-          {node.startDate ? formatDateShort(node.startDate) : '+'}
+        <span className={`block min-w-[28px] px-0.5 text-center ${node.startDate ? 'text-gray-600' : 'text-gray-400 border-b border-gray-300'}`}>
+          {node.startDate ? formatDateShort(node.startDate) : '追加'}
         </span>
         {/* × ボタン: z-index:2 でinput(z-index:1)より上 */}
         <button
@@ -534,8 +534,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       <span className="text-gray-300 flex-shrink-0">→</span>
       <span className="text-gray-400 flex-shrink-0">終了</span>
       <div className="relative flex items-center">
-        <span className={`block min-w-[28px] px-0.5 text-center ${node.endDate ? 'text-gray-600' : 'text-gray-300'}`}>
-          {node.endDate ? formatDateShort(node.endDate) : '+'}
+        <span className={`block min-w-[28px] px-0.5 text-center ${node.endDate ? 'text-gray-600' : 'text-gray-400 border-b border-gray-300'}`}>
+          {node.endDate ? formatDateShort(node.endDate) : '追加'}
         </span>
         <button
           ref={endClearBtnRef}
