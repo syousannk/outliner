@@ -49,6 +49,7 @@ type Action =
   | { type: 'TOGGLE_COLLAPSE'; id: string }
   | { type: 'ADD_NODE'; afterId?: string; isRoot?: boolean }
   | { type: 'ADD_NODE_BEFORE'; beforeId: string }
+  | { type: 'SPLIT_NODE'; id: string; leftText: string; rightText: string }
   | { type: 'INDENT'; id: string } | { type: 'UNINDENT'; id: string }
   | { type: 'DELETE'; id: string } | { type: 'MOVE_UP'; id: string } | { type: 'MOVE_DOWN'; id: string }
   | { type: 'SET_FOCUS'; id: string } | { type: 'TOGGLE_COMPLETE'; id: string }
@@ -91,6 +92,14 @@ function reducer(state: State, action: Action): State {
       const { beforeId } = action; const newNode = createNode();
       const parentId = (nodes[beforeId] as OutlineNode).parent; newNode.parent = parentId; nodes[newNode.id] = newNode;
       const parent = clone(parentId); parent.children.splice(parent.children.indexOf(beforeId), 0, newNode.id);
+      return { ...state, nodes, focusId: newNode.id };
+    }
+    case 'SPLIT_NODE': {
+      const { id, leftText, rightText } = action;
+      clone(id).text = leftText;
+      const newNode = createNode({ text: rightText });
+      const parentId = (nodes[id] as OutlineNode).parent; newNode.parent = parentId; nodes[newNode.id] = newNode;
+      const parent = clone(parentId); parent.children.splice(parent.children.indexOf(id) + 1, 0, newNode.id);
       return { ...state, nodes, focusId: newNode.id };
     }
     case 'INDENT': {
@@ -326,6 +335,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const endClearBtnRef = useRef<HTMLButtonElement>(null);
   const nodeRef = useRef(node);
   nodeRef.current = node;
+  const requestedCursorPos = useRef<number | null>(null);
   const [selfHovered, setSelfHovered] = useState(false);
 
   // 取り消し線アニメーション状態
@@ -359,7 +369,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     const tryFocus = (attempts = 0) => {
       if (el.isConnected) {
         el.focus();
-        try { const len = el.value.length; el.setSelectionRange(len, len); } catch {}
+        try { const pos = requestedCursorPos.current ?? el.value.length; requestedCursorPos.current = null; el.setSelectionRange(pos, pos); } catch {}
         el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       } else if (attempts < 8) {
         requestAnimationFrame(() => tryFocus(attempts + 1));
@@ -403,6 +413,10 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       e.preventDefault();
       const pos = (e.target as HTMLInputElement | HTMLTextAreaElement).selectionStart ?? 0;
       if (pos === 0 && node.text.length > 0) { dispatch({ type: 'ADD_NODE_BEFORE', beforeId: id }); }
+      else if (pos > 0 && pos < node.text.length) {
+        requestedCursorPos.current = 0;
+        dispatch({ type: 'SPLIT_NODE', id, leftText: node.text.slice(0, pos), rightText: node.text.slice(pos) });
+      }
       else { dispatch({ type: 'ADD_NODE', afterId: id }); }
     }
     else if (e.key === 'Backspace') {
