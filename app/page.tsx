@@ -937,7 +937,15 @@ function OutlinerApp({ user }: { user: User }) {
 
           {/* 1行目：アイコン ＋ 検索バー ＋ メール ＋ ログアウト */}
           <div className="flex items-center gap-2">
-            <img src="/icon-192.png" alt="Outliner" className="w-[29px] h-[29px] rounded-lg border border-gray-200 flex-shrink-0 ml-0.5" />
+            <svg width="29" height="29" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" className="rounded-lg border border-gray-200 flex-shrink-0 ml-0.5" aria-label="Outliner">
+              <rect width="32" height="32" rx="7" fill="white"/>
+              <circle cx="5.5" cy="9" r="2.5" fill="#374151"/>
+              <rect x="10" y="8.5" width="18" height="1" rx="0.5" fill="#9ca3af"/>
+              <circle cx="5.5" cy="16" r="2.5" fill="#374151"/>
+              <rect x="10" y="15.5" width="18" height="1" rx="0.5" fill="#9ca3af"/>
+              <circle cx="5.5" cy="23" r="2.5" fill="#374151"/>
+              <rect x="10" y="22.5" width="18" height="1" rx="0.5" fill="#9ca3af"/>
+            </svg>
             <div className="flex-1 flex items-center bg-gray-100 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-gray-300 transition-shadow">
               <Search className="w-3.5 h-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
               <input type="text" placeholder="検索..." className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
