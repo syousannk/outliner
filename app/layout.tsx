@@ -14,11 +14,6 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Outliner",
   description: "アウトラインタスク管理アプリ",
-  icons: {
-    apple: [
-      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
-    ],
-  },
   manifest: "/manifest.json",
 };
 
