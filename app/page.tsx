@@ -644,7 +644,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
               <input
                 ref={desktopInputRef}
                 value={node.text}
-                onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
+                onChange={e => { if (!e.nativeEvent.isComposing) dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value }); }}
+                onCompositionEnd={(e: React.CompositionEvent<HTMLInputElement>) => dispatch({ type: 'UPDATE_TEXT', id, text: (e.target as HTMLInputElement).value })}
                 onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
                 onKeyDown={handleKeyDown}
                 placeholder="タスクを入力"
@@ -696,7 +697,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                     ref={mobileInputRef}
                     type="text"
                     value={node.text}
-                    onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
+                    onChange={e => { if (!e.nativeEvent.isComposing) dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value }); }}
+                    onCompositionEnd={(e: React.CompositionEvent<HTMLInputElement>) => dispatch({ type: 'UPDATE_TEXT', id, text: (e.target as HTMLInputElement).value })}
                     onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
                     onKeyDown={handleKeyDown}
                     placeholder="タスクを入力"
