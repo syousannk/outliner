@@ -998,7 +998,7 @@ function OutlinerApp({ user }: { user: User }) {
               <input type="text" placeholder="検索..." className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
             </div>
-            <span className="text-sm text-gray-500 hidden sm:block max-w-[220px] truncate flex-shrink-0" title={user.email || ''}>
+            <span className="text-xs text-gray-500 hidden sm:block max-w-[220px] truncate flex-shrink-0" title={user.email || ''}>
               {user.email}
             </span>
             <button onClick={() => signOut(auth)} title="ログアウト"
