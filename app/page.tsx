@@ -26,6 +26,18 @@ const PY_CLASS = 'py-1';
 // 日付エリアの固定幅（全階層で右端を揃える）
 const DATE_W = 'w-[300px]';
 
+const MAX_HISTORY = 100;
+
+function getVisibleList(nodes: NodesMap): string[] {
+  const list: string[] = [];
+  const traverse = (id: string) => {
+    if (id !== 'root') list.push(id);
+    const n = nodes[id] as OutlineNode;
+    if (id === 'root' || !n.isCollapsed) n.children.forEach(traverse);
+  };
+  traverse('root'); return list;
+}
+
 const createNode = (overrides: Partial<OutlineNode> = {}): OutlineNode => ({
   id: generateId(), text: '', startDate: '', endDate: '',
   isCollapsed: false, isCompleted: false, children: [], parent: 'root', ...overrides,
@@ -40,8 +52,8 @@ const initialNodes: NodesMap = {
   'node-5': createNode({ id: 'node-5', text: '開始日・終了日の入力UI', parent: 'node-4' }),
 };
 
-interface State { nodes: NodesMap; focusId: string | null; }
-const initialState: State = { nodes: initialNodes, focusId: null };
+interface State { nodes: NodesMap; focusId: string | null; focusCursorPos: number | null; past: NodesMap[]; future: NodesMap[]; }
+const initialState: State = { nodes: initialNodes, focusId: null, focusCursorPos: null, past: [], future: [] };
 
 type Action =
   | { type: 'UPDATE_TEXT'; id: string; text: string }
@@ -57,7 +69,11 @@ type Action =
   | { type: 'RESTORE_NODES'; nodes: NodesMap }
   | { type: 'REORDER_UP'; id: string }
   | { type: 'REORDER_DOWN'; id: string }
-  | { type: 'MOVE_NODE'; id: string; targetParentId: string; targetIndex: number };
+  | { type: 'MOVE_NODE'; id: string; targetParentId: string; targetIndex: number }
+  | { type: 'MERGE_WITH_PREV'; id: string }
+  | { type: 'MERGE_WITH_NEXT'; id: string }
+  | { type: 'UNDO' }
+  | { type: 'REDO' };
 
 function reducer(state: State, action: Action): State {
   const nodes: NodesMap = { ...state.nodes };
@@ -66,18 +82,10 @@ function reducer(state: State, action: Action): State {
     if ((nodes[id] as OutlineNode).children) (nodes[id] as OutlineNode).children = [...(nodes[id] as OutlineNode).children];
     return nodes[id] as OutlineNode;
   };
-  const getVisibleList = (): string[] => {
-    const list: string[] = [];
-    const traverse = (id: string) => {
-      if (id !== 'root') list.push(id);
-      const n = nodes[id] as OutlineNode;
-      if (id === 'root' || !n.isCollapsed) n.children.forEach(traverse);
-    };
-    traverse('root'); return list;
-  };
+  const pushHistory = () => [...state.past, state.nodes].slice(-MAX_HISTORY);
   switch (action.type) {
     case 'UPDATE_TEXT': { clone(action.id).text = action.text; return { ...state, nodes }; }
-    case 'UPDATE_DATES': { const n = clone(action.id); n[action.field] = action.value; return { ...state, nodes }; }
+    case 'UPDATE_DATES': { const n = clone(action.id); n[action.field] = action.value; return { ...state, nodes, past: pushHistory(), future: [] }; }
     case 'TOGGLE_COLLAPSE': { clone(action.id).isCollapsed = !(nodes[action.id] as OutlineNode).isCollapsed; return { ...state, nodes }; }
     case 'ADD_NODE': {
       const { afterId, isRoot } = action; const newNode = createNode();
@@ -86,13 +94,13 @@ function reducer(state: State, action: Action): State {
         const parentId = (nodes[afterId] as OutlineNode).parent; newNode.parent = parentId; nodes[newNode.id] = newNode;
         const parent = clone(parentId); parent.children.splice(parent.children.indexOf(afterId) + 1, 0, newNode.id);
       }
-      return { ...state, nodes, focusId: newNode.id };
+      return { ...state, nodes, focusId: newNode.id, focusCursorPos: null, past: pushHistory(), future: [] };
     }
     case 'ADD_NODE_BEFORE': {
       const { beforeId } = action; const newNode = createNode();
       const parentId = (nodes[beforeId] as OutlineNode).parent; newNode.parent = parentId; nodes[newNode.id] = newNode;
       const parent = clone(parentId); parent.children.splice(parent.children.indexOf(beforeId), 0, newNode.id);
-      return { ...state, nodes, focusId: newNode.id };
+      return { ...state, nodes, focusId: newNode.id, focusCursorPos: null, past: pushHistory(), future: [] };
     }
     case 'SPLIT_NODE': {
       const { id, leftText, rightText } = action;
@@ -100,7 +108,7 @@ function reducer(state: State, action: Action): State {
       const newNode = createNode({ text: rightText });
       const parentId = (nodes[id] as OutlineNode).parent; newNode.parent = parentId; nodes[newNode.id] = newNode;
       const parent = clone(parentId); parent.children.splice(parent.children.indexOf(id) + 1, 0, newNode.id);
-      return { ...state, nodes, focusId: newNode.id };
+      return { ...state, nodes, focusId: newNode.id, focusCursorPos: 0, past: pushHistory(), future: [] };
     }
     case 'INDENT': {
       const { id } = action; const node = nodes[id] as OutlineNode; const parent = clone(node.parent);
@@ -111,27 +119,51 @@ function reducer(state: State, action: Action): State {
       if (depth >= 4) return state;
       const prevSibling = clone(prevSiblingId); parent.children.splice(index, 1);
       prevSibling.children.push(id); prevSibling.isCollapsed = false; clone(id).parent = prevSiblingId;
-      return { ...state, nodes, focusId: id };
+      return { ...state, nodes, focusId: id, focusCursorPos: null, past: pushHistory(), future: [] };
     }
     case 'UNINDENT': {
       const { id } = action; const node = nodes[id] as OutlineNode; if (node.parent === 'root') return state;
       const parent = clone(node.parent); const grandParent = clone(parent.parent);
       const parentIndex = grandParent.children.indexOf(node.parent); const nodeIndex = parent.children.indexOf(id);
       parent.children.splice(nodeIndex, 1); grandParent.children.splice(parentIndex + 1, 0, id); clone(id).parent = parent.parent;
-      return { ...state, nodes, focusId: id };
+      return { ...state, nodes, focusId: id, focusCursorPos: null, past: pushHistory(), future: [] };
     }
     case 'DELETE': {
       const { id } = action; const node = nodes[id] as OutlineNode; if (node.children.length > 0) return state;
       const parent = clone(node.parent);
       if (node.parent === 'root' && parent.children.length === 1 && node.text === '') return state;
-      const list = getVisibleList(); const idx = list.indexOf(id); const prevId = idx > 0 ? list[idx - 1] : null;
+      const list = getVisibleList(state.nodes); const idx = list.indexOf(id); const prevId = idx > 0 ? list[idx - 1] : null;
       parent.children = parent.children.filter((cid: string) => cid !== id); delete nodes[id];
-      return { ...state, nodes, focusId: prevId };
+      return { ...state, nodes, focusId: prevId, focusCursorPos: null, past: pushHistory(), future: [] };
     }
-    case 'MOVE_UP': { const l = getVisibleList(); const i = l.indexOf(action.id); return i > 0 ? { ...state, focusId: l[i - 1] } : state; }
-    case 'MOVE_DOWN': { const l = getVisibleList(); const i = l.indexOf(action.id); return i < l.length - 1 ? { ...state, focusId: l[i + 1] } : state; }
-    case 'SET_FOCUS': return { ...state, focusId: action.id };
-    case 'TOGGLE_COMPLETE': { clone(action.id).isCompleted = !(nodes[action.id] as OutlineNode).isCompleted; return { ...state, nodes }; }
+    case 'MERGE_WITH_PREV': {
+      const { id } = action; const node = nodes[id] as OutlineNode;
+      if (node.children.length > 0) return state;
+      const list = getVisibleList(state.nodes); const idx = list.indexOf(id);
+      if (idx <= 0) return state;
+      const prevId = list[idx - 1]; const prevNode = clone(prevId);
+      const junctionPos = prevNode.text.length;
+      prevNode.text = prevNode.text + node.text;
+      const parent = clone(node.parent);
+      parent.children = parent.children.filter((cid: string) => cid !== id); delete nodes[id];
+      return { ...state, nodes, focusId: prevId, focusCursorPos: junctionPos, past: pushHistory(), future: [] };
+    }
+    case 'MERGE_WITH_NEXT': {
+      const { id } = action; const node = nodes[id] as OutlineNode;
+      const list = getVisibleList(state.nodes); const idx = list.indexOf(id);
+      if (idx >= list.length - 1) return state;
+      const nextId = list[idx + 1]; const nextNode = nodes[nextId] as OutlineNode;
+      if (nextNode.children.length > 0) return state;
+      const junctionPos = node.text.length;
+      clone(id).text = node.text + nextNode.text;
+      const nextParent = clone(nextNode.parent);
+      nextParent.children = nextParent.children.filter((cid: string) => cid !== nextId); delete nodes[nextId];
+      return { ...state, nodes, focusId: id, focusCursorPos: junctionPos, past: pushHistory(), future: [] };
+    }
+    case 'MOVE_UP': { const l = getVisibleList(state.nodes); const i = l.indexOf(action.id); return i > 0 ? { ...state, focusId: l[i - 1], focusCursorPos: null } : state; }
+    case 'MOVE_DOWN': { const l = getVisibleList(state.nodes); const i = l.indexOf(action.id); return i < l.length - 1 ? { ...state, focusId: l[i + 1], focusCursorPos: null } : state; }
+    case 'SET_FOCUS': return { ...state, focusId: action.id, focusCursorPos: null };
+    case 'TOGGLE_COMPLETE': { clone(action.id).isCompleted = !(nodes[action.id] as OutlineNode).isCompleted; return { ...state, nodes, past: pushHistory(), future: [] }; }
     case 'SET_NODES': return { ...state, nodes: action.nodes };
     case 'RESTORE_NODES': return { ...state, nodes: action.nodes };
     case 'REORDER_UP': {
@@ -141,7 +173,7 @@ function reducer(state: State, action: Action): State {
       const children = [...parent.children];
       [children[index - 1], children[index]] = [children[index], children[index - 1]];
       parent.children = children;
-      return { ...state, nodes, focusId: id };
+      return { ...state, nodes, focusId: id, past: pushHistory(), future: [] };
     }
     case 'REORDER_DOWN': {
       const { id } = action; const node = nodes[id] as OutlineNode;
@@ -150,7 +182,7 @@ function reducer(state: State, action: Action): State {
       const children = [...parent.children];
       [children[index], children[index + 1]] = [children[index + 1], children[index]];
       parent.children = children;
-      return { ...state, nodes, focusId: id };
+      return { ...state, nodes, focusId: id, past: pushHistory(), future: [] };
     }
     case 'MOVE_NODE': {
       const { id, targetParentId, targetIndex } = action;
@@ -164,7 +196,17 @@ function reducer(state: State, action: Action): State {
       const insertAt = targetIndex > fromIndex ? targetIndex - 1 : targetIndex;
       children.splice(insertAt, 0, id);
       parent.children = children;
-      return { ...state, nodes };
+      return { ...state, nodes, past: pushHistory(), future: [] };
+    }
+    case 'UNDO': {
+      if (state.past.length === 0) return state;
+      const past = [...state.past]; const prevNodes = past.pop()!;
+      return { ...state, nodes: prevNodes, past, future: [state.nodes, ...state.future].slice(0, MAX_HISTORY), focusCursorPos: null };
+    }
+    case 'REDO': {
+      if (state.future.length === 0) return state;
+      const future = [...state.future]; const nextNodes = future.shift()!;
+      return { ...state, nodes: nextNodes, future, past: [...state.past, state.nodes].slice(-MAX_HISTORY), focusCursorPos: null };
     }
     default: return state;
   }
@@ -316,14 +358,14 @@ const formatDateShort = (dateStr: string): string => {
 // --- ツリーアイテム ---
 interface TreeItemProps {
   id: string; nodes: NodesMap; dispatch: React.Dispatch<Action>;
-  focusId: string | null; matched: Set<string>; isFiltering: boolean; searchQuery: string;
+  focusId: string | null; focusCursorPos: number | null; matched: Set<string>; isFiltering: boolean; searchQuery: string;
   onDeleteRequest: (id: string, snapshot: NodesMap) => void;
   draggingId: string | null; dragOverId: string | null;
   onDragStart: (id: string) => void; onDragOver: (id: string) => void;
   onDragEnd: () => void; onDrop: (targetId: string) => void;
 }
 
-const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFiltering, searchQuery, onDeleteRequest, draggingId, dragOverId, onDragStart, onDragOver, onDragEnd, onDrop }: TreeItemProps) => {
+const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, matched, isFiltering, searchQuery, onDeleteRequest, draggingId, dragOverId, onDragStart, onDragOver, onDragEnd, onDrop }: TreeItemProps) => {
   const node = nodes[id] as OutlineNode;
   const mobileInputRef = useRef<HTMLInputElement>(null);
   const desktopInputRef = useRef<HTMLInputElement>(null);
@@ -335,7 +377,6 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
   const endClearBtnRef = useRef<HTMLButtonElement>(null);
   const nodeRef = useRef(node);
   nodeRef.current = node;
-  const requestedCursorPos = useRef<number | null>(null);
   const [selfHovered, setSelfHovered] = useState(false);
 
   // 取り消し線アニメーション状態
@@ -369,7 +410,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
     const tryFocus = (attempts = 0) => {
       if (el.isConnected) {
         el.focus();
-        try { const pos = requestedCursorPos.current ?? el.value.length; requestedCursorPos.current = null; el.setSelectionRange(pos, pos); } catch {}
+        try { const pos = focusCursorPos ?? el.value.length; el.setSelectionRange(pos, pos); } catch {}
         el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       } else if (attempts < 8) {
         requestAnimationFrame(() => tryFocus(attempts + 1));
@@ -414,14 +455,17 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
       const pos = (e.target as HTMLInputElement | HTMLTextAreaElement).selectionStart ?? 0;
       if (pos === 0 && node.text.length > 0) { dispatch({ type: 'ADD_NODE_BEFORE', beforeId: id }); }
       else if (pos > 0 && pos < node.text.length) {
-        requestedCursorPos.current = 0;
         dispatch({ type: 'SPLIT_NODE', id, leftText: node.text.slice(0, pos), rightText: node.text.slice(pos) });
       }
       else { dispatch({ type: 'ADD_NODE', afterId: id }); }
     }
     else if (e.key === 'Backspace') {
       const el = (e.target as HTMLInputElement | HTMLTextAreaElement);
-      if (node.text === '' && el.selectionStart === 0) { e.preventDefault(); dispatch({ type: 'DELETE', id }); }
+      if (el.selectionStart === 0 && el.selectionEnd === 0) { e.preventDefault(); dispatch({ type: 'MERGE_WITH_PREV', id }); }
+    }
+    else if (e.key === 'Delete') {
+      const el = (e.target as HTMLInputElement | HTMLTextAreaElement);
+      if (el.selectionStart === node.text.length && el.selectionEnd === node.text.length) { e.preventDefault(); dispatch({ type: 'MERGE_WITH_NEXT', id }); }
     }
     else if (e.key === 'ArrowUp' && e.altKey) { e.preventDefault(); dispatch({ type: 'REORDER_UP', id }); }
     else if (e.key === 'ArrowDown' && e.altKey) { e.preventDefault(); dispatch({ type: 'REORDER_DOWN', id }); }
@@ -756,6 +800,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, matched, isFilterin
                   nodes={nodes}
                   dispatch={dispatch}
                   focusId={focusId}
+                  focusCursorPos={focusCursorPos}
                   matched={matched}
                   isFiltering={isFiltering}
                   searchQuery={searchQuery}
@@ -1002,6 +1047,18 @@ function OutlinerApp({ user }: { user: User }) {
               ))}
             </div>
 
+            {/* Undo / Redo */}
+            <div className="flex items-center bg-gray-100 p-0.5 sm:p-1 rounded-lg gap-0.5">
+              <button onClick={() => dispatch({ type: 'UNDO' })} disabled={state.past.length === 0} title="元に戻す (Undo)"
+                className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-md transition-all text-gray-400 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+              <button onClick={() => dispatch({ type: 'REDO' })} disabled={state.future.length === 0} title="やり直す (Redo)"
+                className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-md transition-all text-gray-400 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            </div>
+
             <button onClick={() => window.location.reload()} title="再読み込み"
               className="p-1 sm:p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
               <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -1021,6 +1078,7 @@ function OutlinerApp({ user }: { user: User }) {
                 nodes={state.nodes}
                 dispatch={dispatch}
                 focusId={state.focusId}
+                focusCursorPos={state.focusCursorPos}
                 matched={matched}
                 isFiltering={isFiltering}
                 searchQuery={searchQuery}
