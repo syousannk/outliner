@@ -63,7 +63,7 @@ type Action =
   | { type: 'ADD_NODE_BEFORE'; beforeId: string }
   | { type: 'SPLIT_NODE'; id: string; leftText: string; rightText: string }
   | { type: 'INDENT'; id: string } | { type: 'UNINDENT'; id: string }
-  | { type: 'DELETE'; id: string } | { type: 'MOVE_UP'; id: string } | { type: 'MOVE_DOWN'; id: string }
+  | { type: 'DELETE'; id: string } | { type: 'MOVE_UP'; id: string; cursorPos?: number } | { type: 'MOVE_DOWN'; id: string; cursorPos?: number }
   | { type: 'SET_FOCUS'; id: string } | { type: 'TOGGLE_COMPLETE'; id: string }
   | { type: 'SET_NODES'; nodes: NodesMap }
   | { type: 'RESTORE_NODES'; nodes: NodesMap }
@@ -160,8 +160,8 @@ function reducer(state: State, action: Action): State {
       nextParent.children = nextParent.children.filter((cid: string) => cid !== nextId); delete nodes[nextId];
       return { ...state, nodes, focusId: id, focusCursorPos: junctionPos, past: pushHistory(), future: [] };
     }
-    case 'MOVE_UP': { const l = getVisibleList(state.nodes); const i = l.indexOf(action.id); return i > 0 ? { ...state, focusId: l[i - 1], focusCursorPos: null } : state; }
-    case 'MOVE_DOWN': { const l = getVisibleList(state.nodes); const i = l.indexOf(action.id); return i < l.length - 1 ? { ...state, focusId: l[i + 1], focusCursorPos: null } : state; }
+    case 'MOVE_UP': { const l = getVisibleList(state.nodes); const i = l.indexOf(action.id); return i > 0 ? { ...state, focusId: l[i - 1], focusCursorPos: action.cursorPos ?? null } : state; }
+    case 'MOVE_DOWN': { const l = getVisibleList(state.nodes); const i = l.indexOf(action.id); return i < l.length - 1 ? { ...state, focusId: l[i + 1], focusCursorPos: action.cursorPos ?? null } : state; }
     case 'SET_FOCUS': return { ...state, focusId: action.id, focusCursorPos: null };
     case 'TOGGLE_COMPLETE': { clone(action.id).isCompleted = !(nodes[action.id] as OutlineNode).isCompleted; return { ...state, nodes, past: pushHistory(), future: [] }; }
     case 'SET_NODES': return { ...state, nodes: action.nodes };
@@ -407,10 +407,14 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
     const isMobile = window.innerWidth < 640;
     const el = isMobile ? mobileInputRef.current : desktopInputRef.current;
     if (!el) return;
+    // クリックによるフォーカスの場合はカーソル位置を上書きしない
+    const clickFocused = document.activeElement === el;
     const tryFocus = (attempts = 0) => {
       if (el.isConnected) {
         el.focus();
-        try { const pos = focusCursorPos ?? el.value.length; el.setSelectionRange(pos, pos); } catch {}
+        if (!clickFocused) {
+          try { const pos = focusCursorPos ?? el.value.length; el.setSelectionRange(pos, pos); } catch {}
+        }
         el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       } else if (attempts < 8) {
         requestAnimationFrame(() => tryFocus(attempts + 1));
@@ -471,6 +475,14 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
     else if (e.key === 'ArrowDown' && e.altKey) { e.preventDefault(); dispatch({ type: 'REORDER_DOWN', id }); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); dispatch({ type: 'MOVE_UP', id }); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); dispatch({ type: 'MOVE_DOWN', id }); }
+    else if (e.key === 'ArrowLeft' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      const el = e.target as HTMLInputElement;
+      if (el.selectionStart === 0 && el.selectionEnd === 0) { e.preventDefault(); dispatch({ type: 'MOVE_UP', id }); }
+    }
+    else if (e.key === 'ArrowRight' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      const el = e.target as HTMLInputElement;
+      if (el.selectionStart === node.text.length && el.selectionEnd === node.text.length) { e.preventDefault(); dispatch({ type: 'MOVE_DOWN', id, cursorPos: 0 }); }
+    }
   };
 
   const handleDeleteClick = () => {
