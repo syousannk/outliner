@@ -63,7 +63,7 @@ type Action =
   | { type: 'ADD_NODE_BEFORE'; beforeId: string }
   | { type: 'SPLIT_NODE'; id: string; leftText: string; rightText: string }
   | { type: 'INDENT'; id: string } | { type: 'UNINDENT'; id: string }
-  | { type: 'DELETE'; id: string } | { type: 'MOVE_UP'; id: string; cursorPos?: number } | { type: 'MOVE_DOWN'; id: string; cursorPos?: number }
+  | { type: 'DELETE'; id: string; noFocus?: boolean } | { type: 'MOVE_UP'; id: string; cursorPos?: number } | { type: 'MOVE_DOWN'; id: string; cursorPos?: number }
   | { type: 'SET_FOCUS'; id: string } | { type: 'TOGGLE_COMPLETE'; id: string }
   | { type: 'SET_NODES'; nodes: NodesMap }
   | { type: 'RESTORE_NODES'; nodes: NodesMap }
@@ -134,7 +134,7 @@ function reducer(state: State, action: Action): State {
       if (node.parent === 'root' && parent.children.length === 1 && node.text === '') return state;
       const list = getVisibleList(state.nodes); const idx = list.indexOf(id); const prevId = idx > 0 ? list[idx - 1] : null;
       parent.children = parent.children.filter((cid: string) => cid !== id); delete nodes[id];
-      return { ...state, nodes, focusId: prevId, focusCursorPos: null, past: pushHistory(), future: [] };
+      return { ...state, nodes, focusId: action.noFocus ? null : prevId, focusCursorPos: action.noFocus ? null : null, past: pushHistory(), future: [] };
     }
     case 'MERGE_WITH_PREV': {
       const { id } = action; const node = nodes[id] as OutlineNode;
@@ -415,14 +415,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
     if (!el) return;
     // クリックによるフォーカスの場合はカーソル位置を上書きしない
     const clickFocused = document.activeElement === el;
-    // モバイル: キーボードが閉じている状態でフォーカスするとキーボードが開いてスクロールが発生するため抑制
-    const keyboardOpen = isMobile && (
-      document.activeElement instanceof HTMLInputElement ||
-      document.activeElement instanceof HTMLTextAreaElement
-    );
     const tryFocus = (attempts = 0) => {
       if (el.isConnected) {
-        if (isMobile && !clickFocused && !keyboardOpen) return;
         el.focus({ preventScroll: true });
         if (!clickFocused) {
           try { const pos = focusCursorPos ?? el.value.length; el.setSelectionRange(pos, pos); } catch {}
@@ -499,7 +493,12 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
 
   const handleDeleteClick = () => {
     const snapshot = JSON.parse(JSON.stringify(nodes)) as NodesMap;
-    dispatch({ type: 'DELETE', id });
+    const isMobile = window.innerWidth < 640;
+    const keyboardOpen = isMobile && (
+      document.activeElement instanceof HTMLInputElement ||
+      document.activeElement instanceof HTMLTextAreaElement
+    );
+    dispatch({ type: 'DELETE', id, noFocus: isMobile && !keyboardOpen });
     onDeleteRequest(id, snapshot);
   };
 
