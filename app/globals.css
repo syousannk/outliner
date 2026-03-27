@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body { overflow-x: hidden; }
+/* iOS Safariではbodyのoverflowがスクロール挙動を破壊するため、コンテナ側で制御する */
 
 @keyframes reveal-ltr {
   from { clip-path: inset(0 100% 0 0); }

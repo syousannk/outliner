@@ -498,11 +498,15 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
       document.activeElement instanceof HTMLInputElement ||
       document.activeElement instanceof HTMLTextAreaElement
     );
-    const savedScrollY = isMobile && !keyboardOpen ? window.scrollY : null;
-    dispatch({ type: 'DELETE', id, noFocus: isMobile && !keyboardOpen });
+    const noFocus = isMobile && !keyboardOpen;
+    const savedScrollY = noFocus ? window.scrollY : null;
+    dispatch({ type: 'DELETE', id, noFocus });
     onDeleteRequest(id, snapshot);
     if (savedScrollY !== null) {
-      requestAnimationFrame(() => window.scrollTo({ top: savedScrollY, behavior: 'instant' }));
+      // rAF×2でReactのDOM確定後にスクロール位置を復元
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+      }));
     }
   };
 
@@ -987,7 +991,7 @@ function OutlinerApp({ user }: { user: User }) {
   );
 
   return (
-    <div className="min-h-screen bg-white text-gray-800 font-sans flex flex-col">
+    <div className="min-h-screen bg-white text-gray-800 font-sans flex flex-col overflow-x-hidden">
       <header className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 shadow-sm">
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-8 py-2 flex flex-col gap-2">
 
