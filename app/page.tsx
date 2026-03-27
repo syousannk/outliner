@@ -567,41 +567,38 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
   // 構造: relative flex コンテナに span+×ボタンを並べ、inputはleft-0/right指定で×ボタン手前で止める
   // → iOSのタッチターゲット拡張でinputが×ボタン領域に侵食しないようにする
   const mobileDateArea = (
-    <div className="flex items-center gap-1 text-xs">
-      <span className="text-gray-400 flex-shrink-0">開始</span>
-      {/* relative コンテナ: span(28px) + ml-4(16px) + ×ボタン(~14px) = ~58px */}
+    <div className="flex items-center gap-0.5 text-xs">
+      {/* 開始日 */}
       <div className="relative flex items-center">
         <span className={`block min-w-[28px] px-0.5 text-center ${node.startDate ? 'text-gray-600' : 'text-gray-400 border-b border-gray-300'}`}>
-          {node.startDate ? formatDateShort(node.startDate) : '追加'}
+          {node.startDate ? formatDateShort(node.startDate) : '開始'}
         </span>
-        {/* × ボタン: z-index:2 でinput(z-index:1)より上 */}
         <button
           ref={startClearBtnRef}
           type="button"
-          className={`relative ml-4 p-1 text-gray-300 hover:text-gray-500 text-xs leading-none ${node.startDate ? 'visible' : 'invisible'}`}
+          className={`relative ml-3 p-0.5 text-gray-300 hover:text-gray-500 text-xs leading-none ${node.startDate ? 'visible' : 'invisible'}`}
           style={{ zIndex: 2 }}
           onClick={() => { if (node.startDate) dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' }); }}
         >×</button>
-        {/* input: 日付設定時はright:30pxで×ボタン手前(28px地点)で停止、未設定時は全幅 */}
         <input
           ref={mobileStartDateRef}
           type="date"
           value={node.startDate}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
           className="absolute inset-y-0 left-0 opacity-0 cursor-pointer"
-          style={{ right: node.startDate ? '30px' : '0', fontSize: '16px', zIndex: 1 }}
+          style={{ right: node.startDate ? '24px' : '0', fontSize: '16px', zIndex: 1 }}
         />
       </div>
-      <span className="text-gray-300 flex-shrink-0">→</span>
-      <span className="text-gray-400 flex-shrink-0">終了</span>
+      <span className="text-gray-300 flex-shrink-0">–</span>
+      {/* 終了日 */}
       <div className="relative flex items-center">
         <span className={`block min-w-[28px] px-0.5 text-center ${node.endDate ? 'text-gray-600' : 'text-gray-400 border-b border-gray-300'}`}>
-          {node.endDate ? formatDateShort(node.endDate) : '追加'}
+          {node.endDate ? formatDateShort(node.endDate) : '終了'}
         </span>
         <button
           ref={endClearBtnRef}
           type="button"
-          className={`relative ml-4 p-1 text-gray-300 hover:text-gray-500 text-xs leading-none ${node.endDate ? 'visible' : 'invisible'}`}
+          className={`relative ml-3 p-0.5 text-gray-300 hover:text-gray-500 text-xs leading-none ${node.endDate ? 'visible' : 'invisible'}`}
           style={{ zIndex: 2 }}
           onClick={() => { if (node.endDate) dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' }); }}
         >×</button>
@@ -612,7 +609,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
           min={node.startDate}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
           className="absolute inset-y-0 left-0 opacity-0 cursor-pointer"
-          style={{ right: node.endDate ? '30px' : '0', fontSize: '16px', zIndex: 1 }}
+          style={{ right: node.endDate ? '24px' : '0', fontSize: '16px', zIndex: 1 }}
         />
       </div>
     </div>
@@ -772,34 +769,28 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
                     transition-[color,opacity] duration-500 ${node.isCompleted ? 'text-gray-400 opacity-40' : 'text-gray-900'}`}
                 />
               </div>
-              {/* 日付エリア（未完了のみ） */}
-              {!node.isCompleted && (
-                <div className="flex-shrink-0 self-center pl-1 pb-1">
-                  {mobileDateArea}
-                </div>
-              )}
-            </div>
-
-            {/* 2行目: インデント・ゴミ箱ボタン（右寄せ） */}
-            <div className="flex justify-end">
-              <button
-                onClick={() => dispatch({ type: 'UNINDENT', id })}
-                disabled={!canUnindent}
-                title="インデント減"
-                className="flex-shrink-0 p-1 text-gray-300 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-20 disabled:cursor-not-allowed">
-                <ChevronLeft size={16} />
-              </button>
-              <button
-                onClick={() => dispatch({ type: 'INDENT', id })}
-                disabled={!canIndent}
-                title="インデント増"
-                className="flex-shrink-0 p-1 text-gray-300 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-20 disabled:cursor-not-allowed">
-                <ChevronRight size={16} />
-              </button>
-              <button onClick={handleDeleteClick} title="削除"
-                className="flex-shrink-0 ml-1 p-1 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded transition-colors">
-                <Trash2 size={13} />
-              </button>
+              {/* 右側: 日付 + ボタン（1行） */}
+              <div className="flex-shrink-0 flex items-center gap-0.5 pt-1 pl-1">
+                {!node.isCompleted && mobileDateArea}
+                <button
+                  onClick={() => dispatch({ type: 'UNINDENT', id })}
+                  disabled={!canUnindent}
+                  title="インデント減"
+                  className="flex-shrink-0 p-0.5 text-gray-300 hover:text-gray-600 rounded disabled:opacity-20 disabled:cursor-not-allowed">
+                  <ChevronLeft size={14} />
+                </button>
+                <button
+                  onClick={() => dispatch({ type: 'INDENT', id })}
+                  disabled={!canIndent}
+                  title="インデント増"
+                  className="flex-shrink-0 p-0.5 text-gray-300 hover:text-gray-600 rounded disabled:opacity-20 disabled:cursor-not-allowed">
+                  <ChevronRight size={14} />
+                </button>
+                <button onClick={handleDeleteClick} title="削除"
+                  className="flex-shrink-0 p-0.5 text-gray-300 hover:text-red-400 rounded">
+                  <Trash2 size={12} />
+                </button>
+              </div>
             </div>
           </div>
 
