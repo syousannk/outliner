@@ -500,19 +500,21 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
     );
     const noFocus = isMobile && !keyboardOpen;
     if (noFocus) {
-      // 削除でDOM要素が消えるとブラウザが近くのtextareaに自動フォーカスしキーボードが開く。
-      // 先にbodyへフォーカスを移しておくことで防ぐ。
       (document.activeElement as HTMLElement)?.blur();
-      document.body.focus();
+      const savedScrollY = window.scrollY;
+      let restoring = false;
+      // 削除後のスクロールをscrollイベントで検知し即座に復元
+      const onScroll = () => {
+        if (restoring) return;
+        restoring = true;
+        window.scroll(0, savedScrollY);
+        restoring = false;
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      setTimeout(() => window.removeEventListener('scroll', onScroll), 600);
     }
-    const savedScrollY = noFocus ? window.scrollY : null;
     dispatch({ type: 'DELETE', id, noFocus });
     onDeleteRequest(id, snapshot);
-    if (savedScrollY !== null) {
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        window.scroll(0, savedScrollY);
-      }));
-    }
   };
 
   // showPicker() でカレンダーを開く
