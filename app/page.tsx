@@ -1051,7 +1051,7 @@ function OutlinerApp({ user }: { user: User }) {
           {/* 2行目：リスト切替タブ */}
           <div className="flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
             {lists.map((list: { id: string; title: string }) => (
-              <div key={list.id} className={`flex-shrink-0 flex items-center gap-0.5 rounded-lg text-sm transition-colors ${
+              <div key={list.id} className={`flex-shrink-0 relative flex items-center rounded-lg text-sm transition-colors ${
                 currentListId === list.id ? 'bg-gray-200 text-gray-800 font-medium' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
               }`}>
                 {editingListId === list.id ? (
@@ -1065,19 +1065,19 @@ function OutlinerApp({ user }: { user: User }) {
                       if (e.key === 'Escape') setEditingListId(null);
                     }}
                     onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                    className="bg-transparent outline-none w-24 px-2.5 py-1 text-sm text-center"
+                    className="bg-transparent outline-none w-24 px-5 py-1 text-sm text-center"
                   />
                 ) : (
                   <button
                     onClick={() => setCurrentListId(list.id)}
                     onDoubleClick={() => { setEditingListId(list.id); setEditingListTitle(list.title); }}
-                    className="px-2.5 py-1 text-center"
+                    className={`px-5 py-1 text-center ${lists.length > 1 ? 'pr-4' : ''}`}
                   >{list.title}</button>
                 )}
                 {lists.length > 1 && (
                   <button
                     onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleDeleteList(list.id); }}
-                    className="pr-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   ><X size={12} /></button>
                 )}
               </div>
