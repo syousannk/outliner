@@ -1071,7 +1071,7 @@ function OutlinerApp({ user }: { user: User }) {
                   <button
                     onClick={() => setCurrentListId(list.id)}
                     onDoubleClick={() => { setEditingListId(list.id); setEditingListTitle(list.title); }}
-                    className={`px-5 py-1 text-center ${lists.length > 1 ? 'pr-4' : ''}`}
+                    className="px-5 py-1 text-center" style={{ paddingRight: '24px' }}
                   >{list.title}</button>
                 )}
                 {lists.length > 1 && (
