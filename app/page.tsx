@@ -421,7 +421,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
         if (!clickFocused) {
           try { const pos = focusCursorPos ?? el.value.length; el.setSelectionRange(pos, pos); } catch {}
         }
-        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        if (!isMobile) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       } else if (attempts < 8) {
         requestAnimationFrame(() => tryFocus(attempts + 1));
       }
