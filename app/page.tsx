@@ -954,6 +954,8 @@ function OutlinerApp({ user }: { user: User }) {
 
   const handleDeleteList = useCallback((id: string) => {
     if (lists.length <= 1) return;
+    const listTitle = lists.find((l: { id: string; title: string }) => l.id === id)?.title || 'このリスト';
+    if (!window.confirm(`「${listTitle}」を削除しますか？`)) return;
     const updated = lists.filter((l: { id: string; title: string }) => l.id !== id);
     setDoc(metaRef, { lists: updated });
     deleteDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'outline', id));
