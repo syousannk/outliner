@@ -998,7 +998,7 @@ function OutlinerApp({ user }: { user: User }) {
   );
 
   return (
-    <div className="min-h-screen bg-white text-gray-800 font-sans flex flex-col overflow-x-hidden" tabIndex={-1}>
+    <div className="min-h-screen bg-white text-gray-800 font-sans flex flex-col" style={{ overflowX: 'clip' }} tabIndex={-1}>
       <header className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 shadow-sm">
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-8 py-2 flex flex-col gap-2">
 
