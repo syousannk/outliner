@@ -417,7 +417,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
     const clickFocused = document.activeElement === el;
     const tryFocus = (attempts = 0) => {
       if (el.isConnected) {
-        el.focus();
+        el.focus({ preventScroll: true });
         if (!clickFocused) {
           try { const pos = focusCursorPos ?? el.value.length; el.setSelectionRange(pos, pos); } catch {}
         }
@@ -979,7 +979,7 @@ function OutlinerApp({ user }: { user: User }) {
 
   return (
     <div className="min-h-screen bg-white text-gray-800 font-sans flex flex-col">
-      <header className="sticky top-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 shadow-sm">
+      <header className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 shadow-sm">
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-8 py-2 flex flex-col gap-2">
 
           {/* 1行目：アイコン ＋ 検索バー ＋ メール ＋ ログアウト */}
@@ -1072,7 +1072,7 @@ function OutlinerApp({ user }: { user: User }) {
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-8 pb-24">
+      <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-8 pb-24 pt-[112px] sm:pt-[100px]">
         <div className="sm:min-w-[700px] pr-2 sm:pr-4">
           <div className="tree-root">
             {(state.nodes['root'] as OutlineNode).children.map((id: string) => (
