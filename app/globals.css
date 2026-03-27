@@ -4,6 +4,10 @@
 
 /* iOS Safariではbodyのoverflowがスクロール挙動を破壊するため、コンテナ側で制御する */
 
+/* スクロールバーを非表示（mainスクロール領域） */
+main { scrollbar-width: none; }
+main::-webkit-scrollbar { display: none; }
+
 @keyframes reveal-ltr {
   from { clip-path: inset(0 100% 0 0); }
   to   { clip-path: inset(0 0%   0 0); }
