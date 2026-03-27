@@ -499,13 +499,18 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
       document.activeElement instanceof HTMLTextAreaElement
     );
     const noFocus = isMobile && !keyboardOpen;
+    if (noFocus) {
+      // 削除でDOM要素が消えるとブラウザが近くのtextareaに自動フォーカスしキーボードが開く。
+      // 先にbodyへフォーカスを移しておくことで防ぐ。
+      (document.activeElement as HTMLElement)?.blur();
+      document.body.focus();
+    }
     const savedScrollY = noFocus ? window.scrollY : null;
     dispatch({ type: 'DELETE', id, noFocus });
     onDeleteRequest(id, snapshot);
     if (savedScrollY !== null) {
-      // rAF×2でReactのDOM確定後にスクロール位置を復元
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+        window.scroll(0, savedScrollY);
       }));
     }
   };
@@ -991,7 +996,7 @@ function OutlinerApp({ user }: { user: User }) {
   );
 
   return (
-    <div className="min-h-screen bg-white text-gray-800 font-sans flex flex-col overflow-x-hidden">
+    <div className="min-h-screen bg-white text-gray-800 font-sans flex flex-col overflow-x-hidden" tabIndex={-1}>
       <header className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 shadow-sm">
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-8 py-2 flex flex-col gap-2">
 
