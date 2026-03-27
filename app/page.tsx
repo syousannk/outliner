@@ -501,17 +501,6 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
     const noFocus = isMobile && !keyboardOpen;
     if (noFocus) {
       (document.activeElement as HTMLElement)?.blur();
-      const savedScrollY = window.scrollY;
-      let restoring = false;
-      // 削除後のスクロールをscrollイベントで検知し即座に復元
-      const onScroll = () => {
-        if (restoring) return;
-        restoring = true;
-        window.scroll(0, savedScrollY);
-        restoring = false;
-      };
-      window.addEventListener('scroll', onScroll, { passive: true });
-      setTimeout(() => window.removeEventListener('scroll', onScroll), 600);
     }
     dispatch({ type: 'DELETE', id, noFocus });
     onDeleteRequest(id, snapshot);
@@ -998,8 +987,8 @@ function OutlinerApp({ user }: { user: User }) {
   );
 
   return (
-    <div className="min-h-screen bg-white text-gray-800 font-sans flex flex-col" style={{ overflowX: 'clip' }} tabIndex={-1}>
-      <header className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200 shadow-sm">
+    <div className="bg-white text-gray-800 font-sans flex flex-col" style={{ height: '100dvh', overflow: 'hidden' }} tabIndex={-1}>
+      <header className="flex-shrink-0 bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-8 py-2 flex flex-col gap-2">
 
           {/* 1行目：アイコン ＋ 検索バー ＋ メール ＋ ログアウト */}
@@ -1092,7 +1081,7 @@ function OutlinerApp({ user }: { user: User }) {
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-8 pb-24 pt-[112px] sm:pt-[100px]">
+      <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-8 pb-[50vh] sm:pb-24 overflow-y-auto" style={{ overflowX: 'clip' }}>
         <div className="sm:min-w-[700px] pr-2 sm:pr-4">
           <div className="tree-root">
             {(state.nodes['root'] as OutlineNode).children.map((id: string) => (
