@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useReducer, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Circle, Search, Plus, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, List, CircleDot, CircleCheck, CalendarDays, CalendarCheck2, CalendarX2, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
+import { Circle, Search, Plus, X, CheckCircle, Loader2, LogOut, Mail, Lock, User as UserIcon, Eye, EyeOff, Trash2, RotateCcw, RefreshCw, List, CircleDot, CircleCheck, CalendarDays, CalendarCheck2, CalendarX2, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
 import {
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged, User, updateProfile,
 } from 'firebase/auth';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db, APP_ID } from '@/lib/firebase';
 
 const generateId = () => crypto.randomUUID();
@@ -879,52 +879,92 @@ function OutlinerApp({ user }: { user: User }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState('ALL');
-  const [title, setTitle] = useState('My Outline');
   const [isLoaded, setIsLoaded] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const prevDataRef = useRef({ nodes: initialState.nodes, title: 'My Outline', filterMode: 'ALL' });
+  const prevDataRef = useRef({ nodes: initialState.nodes, filterMode: 'ALL' });
 
-  // Firestoreからロード
+  // リスト管理
+  const [lists, setLists] = useState<{ id: string; title: string }[]>([]);
+  const [currentListId, setCurrentListId] = useState('main');
+  const [isListsLoaded, setIsListsLoaded] = useState(false);
+  const [editingListId, setEditingListId] = useState<string | null>(null);
+  const [editingListTitle, setEditingListTitle] = useState('');
+
+  const metaRef = useMemo(() => doc(db, 'artifacts', APP_ID, 'users', user.uid, 'meta', 'lists'), [user]);
+
+  // リスト一覧をFirestoreからロード
   useEffect(() => {
-    const docRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'outline', 'main');
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const d = docSnap.data();
+    const unsub = onSnapshot(metaRef, (snap: import('firebase/firestore').DocumentSnapshot) => {
+      if (snap.exists()) {
+        setLists(snap.data().lists || []);
+      } else {
+        const initial = [{ id: 'main', title: 'My Outline' }];
+        setDoc(metaRef, { lists: initial });
+        setLists(initial);
+      }
+      setIsListsLoaded(true);
+    });
+    return () => unsub();
+  }, [metaRef]);
+
+  // 現在のリストデータをFirestoreからロード
+  useEffect(() => {
+    if (!isListsLoaded) return;
+    setIsLoaded(false);
+    const docRef = doc(db, 'artifacts', APP_ID, 'users', user.uid, 'outline', currentListId);
+    const unsub = onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        const d = snap.data();
         const rn = d.nodes || initialNodes;
-        const rt = d.title || 'My Outline';
         const rm = d.filterMode || 'ALL';
         const prev = prevDataRef.current;
-        if (JSON.stringify(rn) !== JSON.stringify(prev.nodes) || rt !== prev.title) {
-          dispatch({ type: 'SET_NODES', nodes: rn });
-          setTitle(rt);
-        }
+        if (JSON.stringify(rn) !== JSON.stringify(prev.nodes)) dispatch({ type: 'SET_NODES', nodes: rn });
         if (rm !== prev.filterMode) setFilterMode(rm);
-        prevDataRef.current = { nodes: rn, title: rt, filterMode: rm };
+        prevDataRef.current = { nodes: rn, filterMode: rm };
       } else {
-        setDoc(docRef, { nodes: initialNodes, title: 'My Outline', filterMode: 'ALL' });
+        const newNode = createNode();
+        const newNodes: NodesMap = { root: { id: 'root', children: [newNode.id], parent: null }, [newNode.id]: { ...newNode, parent: 'root' } };
+        setDoc(docRef, { nodes: newNodes, filterMode: 'ALL' });
       }
       setIsLoaded(true);
     }, () => setIsLoaded(true));
-    return () => unsubscribe();
-  }, [user]);
+    return () => unsub();
+  }, [user, currentListId, isListsLoaded]);
 
   // ローカル変更をFirestoreに保存
   useEffect(() => {
     if (!isLoaded) return;
     const prev = prevDataRef.current;
-    if (
-      JSON.stringify(state.nodes) !== JSON.stringify(prev.nodes) ||
-      title !== prev.title ||
-      filterMode !== prev.filterMode
-    ) {
-      prevDataRef.current = { nodes: state.nodes, title, filterMode };
-      setDoc(
-        doc(db, 'artifacts', APP_ID, 'users', user.uid, 'outline', 'main'),
-        { nodes: state.nodes, title, filterMode },
-        { merge: true }
-      );
+    if (JSON.stringify(state.nodes) !== JSON.stringify(prev.nodes) || filterMode !== prev.filterMode) {
+      prevDataRef.current = { nodes: state.nodes, filterMode };
+      setDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'outline', currentListId), { nodes: state.nodes, filterMode }, { merge: true });
     }
-  }, [state.nodes, title, filterMode, user, isLoaded]);
+  }, [state.nodes, filterMode, user, isLoaded, currentListId]);
+
+  // リスト操作
+  const handleCreateList = useCallback(() => {
+    const newId = generateId();
+    const newTitle = '新しいリスト';
+    const updated = [...lists, { id: newId, title: newTitle }];
+    setDoc(metaRef, { lists: updated });
+    setCurrentListId(newId);
+    setEditingListId(newId);
+    setEditingListTitle(newTitle);
+  }, [lists, metaRef]);
+
+  const handleDeleteList = useCallback((id: string) => {
+    if (lists.length <= 1) return;
+    const updated = lists.filter((l: { id: string; title: string }) => l.id !== id);
+    setDoc(metaRef, { lists: updated });
+    deleteDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'outline', id));
+    if (currentListId === id) setCurrentListId(updated[0].id);
+  }, [lists, metaRef, currentListId, user]);
+
+  const handleRenameList = useCallback((id: string, newTitle: string) => {
+    const trimmed = newTitle.trim() || 'リスト';
+    setDoc(metaRef, { lists: lists.map((l: { id: string; title: string }) => l.id === id ? { ...l, title: trimmed } : l) });
+    setEditingListId(null);
+  }, [lists, metaRef]);
 
   // ドラッグ&ドロップ状態
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -1008,7 +1048,47 @@ function OutlinerApp({ user }: { user: User }) {
             </button>
           </div>
 
-          {/* 2行目：フィルター ＋ 日付フィルター ＋ リロード */}
+          {/* 2行目：リスト切替タブ */}
+          <div className="flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+            {lists.map((list: { id: string; title: string }) => (
+              <div key={list.id} className={`flex-shrink-0 flex items-center gap-0.5 rounded-lg text-sm transition-colors ${
+                currentListId === list.id ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}>
+                {editingListId === list.id ? (
+                  <input
+                    autoFocus
+                    value={editingListTitle}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingListTitle(e.target.value)}
+                    onBlur={() => handleRenameList(list.id, editingListTitle)}
+                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                      if (e.key === 'Enter') handleRenameList(list.id, editingListTitle);
+                      if (e.key === 'Escape') setEditingListId(null);
+                    }}
+                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                    className="bg-transparent outline-none w-24 px-2.5 py-1 text-sm"
+                  />
+                ) : (
+                  <button
+                    onClick={() => setCurrentListId(list.id)}
+                    onDoubleClick={() => { setEditingListId(list.id); setEditingListTitle(list.title); }}
+                    className="px-2.5 py-1 text-left"
+                  >{list.title}</button>
+                )}
+                {lists.length > 1 && (
+                  <button
+                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleDeleteList(list.id); }}
+                    className={`pr-1.5 transition-colors ${currentListId === list.id ? 'text-gray-400 hover:text-white' : 'text-gray-300 hover:text-gray-600'}`}
+                  ><X size={12} /></button>
+                )}
+              </div>
+            ))}
+            <button onClick={handleCreateList} title="新しいリストを作成"
+              className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+              <Plus size={16} />
+            </button>
+          </div>
+
+          {/* 3行目：フィルター ＋ 日付フィルター ＋ リロード */}
           <div className="flex items-center gap-1 sm:gap-2">
             {/* タスク状態フィルター */}
             <div className="flex items-center bg-gray-100 p-0.5 sm:p-1 rounded-lg gap-0.5">
