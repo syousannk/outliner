@@ -1052,7 +1052,7 @@ function OutlinerApp({ user }: { user: User }) {
           <div className="flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
             {lists.map((list: { id: string; title: string }) => (
               <div key={list.id} className={`flex-shrink-0 flex items-center gap-0.5 rounded-lg text-sm transition-colors ${
-                currentListId === list.id ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                currentListId === list.id ? 'bg-gray-200 text-gray-800 font-medium' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
               }`}>
                 {editingListId === list.id ? (
                   <input
@@ -1065,19 +1065,19 @@ function OutlinerApp({ user }: { user: User }) {
                       if (e.key === 'Escape') setEditingListId(null);
                     }}
                     onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                    className="bg-transparent outline-none w-24 px-2.5 py-1 text-sm"
+                    className="bg-transparent outline-none w-24 px-2.5 py-1 text-sm text-center"
                   />
                 ) : (
                   <button
                     onClick={() => setCurrentListId(list.id)}
                     onDoubleClick={() => { setEditingListId(list.id); setEditingListTitle(list.title); }}
-                    className="px-2.5 py-1 text-left"
+                    className="px-2.5 py-1 text-center"
                   >{list.title}</button>
                 )}
                 {lists.length > 1 && (
                   <button
                     onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleDeleteList(list.id); }}
-                    className={`pr-1.5 transition-colors ${currentListId === list.id ? 'text-gray-400 hover:text-white' : 'text-gray-300 hover:text-gray-600'}`}
+                    className="pr-1.5 text-gray-400 hover:text-gray-600 transition-colors"
                   ><X size={12} /></button>
                 )}
               </div>
