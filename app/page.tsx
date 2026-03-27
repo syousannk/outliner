@@ -367,7 +367,7 @@ interface TreeItemProps {
 
 const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, matched, isFiltering, searchQuery, onDeleteRequest, draggingId, dragOverId, onDragStart, onDragOver, onDragEnd, onDrop }: TreeItemProps) => {
   const node = nodes[id] as OutlineNode;
-  const mobileInputRef = useRef<HTMLInputElement>(null);
+  const mobileInputRef = useRef<HTMLTextAreaElement>(null);
   const desktopInputRef = useRef<HTMLInputElement>(null);
   const startDateRef = useRef<HTMLInputElement>(null);
   const endDateRef = useRef<HTMLInputElement>(null);
@@ -400,7 +400,13 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
     }
   }, [node.isCompleted]);
 
-  // (スマホをinput type=textに変更したため高さ自動調整は不要)
+  // スマホtextareaの高さ自動調整
+  useEffect(() => {
+    const el = mobileInputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }, [node.text]);
 
   useEffect(() => {
     if (focusId !== id) return;
@@ -744,35 +750,38 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
             onMouseEnter={() => setSelfHovered(true)}
             onMouseLeave={() => setSelfHovered(false)}
           >
-            {/* 1行目: テキスト + インデントボタン + ゴミ箱 */}
-            <div className="flex items-center">
+            {/* 1行目: テキスト（折り返し） + 日付（右側） */}
+            <div className="flex items-start">
               <div className="flex-1 min-w-0">
-                <div className="relative">
-                  <input
-                    ref={mobileInputRef}
-                    type="text"
-                    value={node.text}
-                    onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
-                    onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
-                    onKeyDown={handleKeyDown}
-                    placeholder="タスクを入力"
-                    style={{ overflowX: 'auto' }}
-                    className={`w-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS} ${PY_CLASS}
-                      ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                      transition-[color,opacity] duration-500 ${node.isCompleted ? 'text-gray-400 opacity-40' : 'text-gray-900'}`}
-                  />
-                  {/* 取り消し線: デスクトップ同様テキスト幅のspanに重ねて描画 */}
-                  {strikeState && (
-                    <div className="pointer-events-none absolute inset-0 flex items-center px-1" aria-hidden>
-                      <span className={`relative whitespace-pre ${TEXT_CLASS} ${LEADING_CLASS}`} style={{ color: 'transparent' }}>
-                        {node.text || '\u00A0'}
-                        {strikeLine}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                <textarea
+                  ref={mobileInputRef}
+                  rows={1}
+                  value={node.text}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                    e.target.style.height = 'auto';
+                    e.target.style.height = e.target.scrollHeight + 'px';
+                    dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value });
+                  }}
+                  onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
+                  onKeyDown={handleKeyDown}
+                  placeholder="タスクを入力"
+                  style={{ resize: 'none', overflow: 'hidden' }}
+                  className={`w-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS} ${PY_CLASS}
+                    ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
+                    ${strikeState === 'in' || strikeState === 'done' ? 'strike-text-done' : strikeState === 'out' ? 'strike-text-out' : ''}
+                    transition-[color,opacity] duration-500 ${node.isCompleted ? 'text-gray-400 opacity-40' : 'text-gray-900'}`}
+                />
               </div>
-              {/* インデント減ボタン */}
+              {/* 日付エリア（未完了のみ） */}
+              {!node.isCompleted && (
+                <div className="flex-shrink-0 self-center pl-1 pb-1">
+                  {mobileDateArea}
+                </div>
+              )}
+            </div>
+
+            {/* 2行目: インデント・ゴミ箱ボタン（右寄せ） */}
+            <div className="flex justify-end">
               <button
                 onClick={() => dispatch({ type: 'UNINDENT', id })}
                 disabled={!canUnindent}
@@ -780,7 +789,6 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
                 className="flex-shrink-0 p-1 text-gray-300 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-20 disabled:cursor-not-allowed">
                 <ChevronLeft size={16} />
               </button>
-              {/* インデント増ボタン */}
               <button
                 onClick={() => dispatch({ type: 'INDENT', id })}
                 disabled={!canIndent}
@@ -793,13 +801,6 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
                 <Trash2 size={13} />
               </button>
             </div>
-
-            {/* 2行目: 日付（コンパクト表示）: 完了済みは非表示 */}
-            {!node.isCompleted && (
-              <div className="mt-0.5 pb-1">
-                {mobileDateArea}
-              </div>
-            )}
           </div>
 
           {/* 子ノード */}
