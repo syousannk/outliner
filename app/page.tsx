@@ -498,8 +498,12 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
       document.activeElement instanceof HTMLInputElement ||
       document.activeElement instanceof HTMLTextAreaElement
     );
+    const savedScrollY = isMobile && !keyboardOpen ? window.scrollY : null;
     dispatch({ type: 'DELETE', id, noFocus: isMobile && !keyboardOpen });
     onDeleteRequest(id, snapshot);
+    if (savedScrollY !== null) {
+      requestAnimationFrame(() => window.scrollTo({ top: savedScrollY, behavior: 'instant' }));
+    }
   };
 
   // showPicker() でカレンダーを開く
