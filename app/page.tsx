@@ -415,8 +415,14 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
     if (!el) return;
     // クリックによるフォーカスの場合はカーソル位置を上書きしない
     const clickFocused = document.activeElement === el;
+    // モバイル: キーボードが閉じている状態でフォーカスするとキーボードが開いてスクロールが発生するため抑制
+    const keyboardOpen = isMobile && (
+      document.activeElement instanceof HTMLInputElement ||
+      document.activeElement instanceof HTMLTextAreaElement
+    );
     const tryFocus = (attempts = 0) => {
       if (el.isConnected) {
+        if (isMobile && !clickFocused && !keyboardOpen) return;
         el.focus({ preventScroll: true });
         if (!clickFocused) {
           try { const pos = focusCursorPos ?? el.value.length; el.setSelectionRange(pos, pos); } catch {}
