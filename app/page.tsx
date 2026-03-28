@@ -1077,7 +1077,7 @@ function OutlinerApp({ user }: { user: User }) {
           <div className="flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
             {lists.map((list: { id: string; title: string }) => (
               <div key={list.id} className={`flex-shrink-0 relative flex items-center rounded-lg text-sm transition-colors ${
-                currentListId === list.id ? 'bg-gray-200 text-gray-800 font-medium' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                currentListId === list.id ? 'bg-gray-200 text-gray-800 font-medium' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
               }`}>
                 {editingListId === list.id ? (
                   <input
