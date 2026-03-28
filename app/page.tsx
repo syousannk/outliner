@@ -355,6 +355,19 @@ const formatDateShort = (dateStr: string): string => {
   return `${parseInt(m)}/${parseInt(d)}`;
 };
 
+// 日付の状態を返す（期限切れ・当日・通常）
+const getTodayStr = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+const getDateBg = (dateStr: string, isCompleted: boolean): string => {
+  if (!dateStr || isCompleted) return '';
+  const today = getTodayStr();
+  if (dateStr < today) return 'overdue';
+  if (dateStr === today) return 'today';
+  return '';
+};
+
 // --- ツリーアイテム ---
 interface TreeItemProps {
   id: string; nodes: NodesMap; dispatch: React.Dispatch<Action>;
@@ -519,7 +532,11 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
   const dateArea = (
     <div className="flex items-center gap-1">
       {/* 開始日 */}
-      <div className="relative flex items-center bg-gray-100 rounded-md border border-gray-200 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
+      <div className={`relative flex items-center rounded-md border hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden ${
+        getDateBg(node.startDate, node.isCompleted) === 'overdue' ? 'bg-red-50 border-red-200' :
+        getDateBg(node.startDate, node.isCompleted) === 'today'   ? 'bg-yellow-50 border-yellow-200' :
+        'bg-gray-100 border-gray-200'
+      }`}>
         <input ref={startDateRef} type="date" value={node.startDate}
           onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
           className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors
@@ -529,7 +546,6 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
           onClick={() => node.startDate && dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' })}
           className={`px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ${node.startDate ? 'visible' : 'invisible'}`}
           title="開始日を削除">×</button>
-        {/* 完了時の取り消し線 */}
         {node.isCompleted && node.startDate && (
           <div className="pointer-events-none absolute inset-0 flex items-center px-2">
             <div className="w-full h-px bg-gray-400" />
@@ -538,9 +554,13 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
       </div>
       <span className="text-gray-300 text-xs flex-shrink-0">–</span>
       {/* 終了日 */}
-      <div className="relative flex items-center bg-gray-100 rounded-md border border-gray-200 hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden">
+      <div className={`relative flex items-center rounded-md border hover:border-gray-300 focus-within:border-gray-400 focus-within:bg-white transition-all overflow-hidden ${
+        getDateBg(node.endDate, node.isCompleted) === 'overdue' ? 'bg-red-50 border-red-200' :
+        getDateBg(node.endDate, node.isCompleted) === 'today'   ? 'bg-yellow-50 border-yellow-200' :
+        'bg-gray-100 border-gray-200'
+      }`}>
         <input ref={endDateRef} type="date" value={node.endDate} min={node.startDate}
-          onChange={e => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
           className={`bg-transparent outline-none cursor-pointer w-[120px] text-xs rounded px-2 py-0.5 hover:bg-gray-100 focus:ring-1 focus:ring-gray-300 transition-colors
             ${!node.endDate ? 'text-gray-500' : 'text-gray-600'}`}
           title="終了日" />
@@ -548,7 +568,6 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
           onClick={() => node.endDate && dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' })}
           className={`px-1 text-gray-300 hover:text-gray-500 transition-colors text-xs leading-none ${node.endDate ? 'visible' : 'invisible'}`}
           title="終了日を削除">×</button>
-        {/* 完了時の取り消し線 */}
         {node.isCompleted && node.endDate && (
           <div className="pointer-events-none absolute inset-0 flex items-center px-2">
             <div className="w-full h-px bg-gray-400" />
@@ -579,7 +598,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
     <div className="flex items-center gap-0.5 text-xs">
       {/* 開始日 */}
       <div className="relative flex items-center">
-        <span className={`block min-w-[28px] px-0.5 text-center ${node.startDate ? 'text-gray-600' : 'text-gray-400 border-b border-gray-300'}`}>
+        <span className={`block min-w-[28px] px-0.5 text-center rounded ${
+          node.startDate ? 'text-gray-600' : 'text-gray-400 border-b border-gray-300'
+        } ${getDateBg(node.startDate, node.isCompleted) === 'overdue' ? 'bg-red-50' : getDateBg(node.startDate, node.isCompleted) === 'today' ? 'bg-yellow-50' : ''}`}>
           {node.startDate ? formatDateShort(node.startDate) : '開始'}
         </span>
         <button
@@ -601,7 +622,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
       <span className="text-gray-300 flex-shrink-0">–</span>
       {/* 終了日 */}
       <div className="relative flex items-center">
-        <span className={`block min-w-[28px] px-0.5 text-center ${node.endDate ? 'text-gray-600' : 'text-gray-400 border-b border-gray-300'}`}>
+        <span className={`block min-w-[28px] px-0.5 text-center rounded ${
+          node.endDate ? 'text-gray-600' : 'text-gray-400 border-b border-gray-300'
+        } ${getDateBg(node.endDate, node.isCompleted) === 'overdue' ? 'bg-red-50' : getDateBg(node.endDate, node.isCompleted) === 'today' ? 'bg-yellow-50' : ''}`}>
           {node.endDate ? formatDateShort(node.endDate) : '終了'}
         </span>
         <button
