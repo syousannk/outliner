@@ -594,35 +594,27 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
   // スマホ用日付エリア（コンパクト表示）
   // 構造: relative flex コンテナに span+×ボタンを並べ、inputはleft-0/right指定で×ボタン手前で止める
   // → iOSのタッチターゲット拡張でinputが×ボタン領域に侵食しないようにする
-  // input[type=date]のiOSタッチ領域拡張を避けるため、showPicker/focusで直接開く
-  const openDatePicker = (ref: React.RefObject<HTMLInputElement>) => {
-    const el = ref.current;
-    if (!el) return;
-    if (typeof (el as HTMLInputElement & { showPicker?: () => void }).showPicker === 'function') {
-      (el as HTMLInputElement & { showPicker: () => void }).showPicker();
-    } else {
-      el.focus();
-    }
-  };
-
+  // 設計方針: label[htmlFor] でinputを起動 + inputはposition:fixed left:-9999pxでオフスクリーン配置
+  // → iOSのネイティブタッチ領域拡張が隣のボタンに干渉しない
   const mobileDateArea = (
     <div className="flex items-center gap-0.5 text-xs">
-      {/* 開始日: inputはw-0/h-0/pointer-events-noneにしてタッチ領域を0に */}
+      {/* 開始日 */}
       <div className="flex items-center">
-        <div
+        <label
+          htmlFor={`sd-${id}`}
           className={`min-w-[28px] px-0.5 text-center rounded cursor-pointer select-none ${
             node.startDate ? 'text-gray-600' : 'text-gray-400 border-b border-gray-300'
           } ${getDateBg(node.startDate, node.isCompleted) === 'overdue' ? 'bg-red-50' : getDateBg(node.startDate, node.isCompleted) === 'today' ? 'bg-yellow-50' : ''}`}
-          onClick={() => openDatePicker(mobileStartDateRef)}
         >
           {node.startDate ? formatDateShort(node.startDate) : '開始'}
-        </div>
+        </label>
         <input
+          id={`sd-${id}`}
           ref={mobileStartDateRef}
           type="date"
           value={node.startDate}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
-          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+          style={{ position: 'fixed', left: '-9999px', top: 0, width: '1px', height: '1px', opacity: 0 }}
         />
         <button
           ref={startClearBtnRef}
@@ -634,21 +626,22 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
       <span className="text-gray-300 flex-shrink-0">–</span>
       {/* 終了日 */}
       <div className="flex items-center">
-        <div
+        <label
+          htmlFor={`ed-${id}`}
           className={`min-w-[28px] px-0.5 text-center rounded cursor-pointer select-none ${
             node.endDate ? 'text-gray-600' : 'text-gray-400 border-b border-gray-300'
           } ${getDateBg(node.endDate, node.isCompleted) === 'overdue' ? 'bg-red-50' : getDateBg(node.endDate, node.isCompleted) === 'today' ? 'bg-yellow-50' : ''}`}
-          onClick={() => openDatePicker(mobileEndDateRef)}
         >
           {node.endDate ? formatDateShort(node.endDate) : '終了'}
-        </div>
+        </label>
         <input
+          id={`ed-${id}`}
           ref={mobileEndDateRef}
           type="date"
           value={node.endDate}
           min={node.startDate}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
-          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+          style={{ position: 'fixed', left: '-9999px', top: 0, width: '1px', height: '1px', opacity: 0 }}
         />
         <button
           ref={endClearBtnRef}
@@ -1192,7 +1185,7 @@ function OutlinerApp({ user }: { user: User }) {
               className="p-1 sm:p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
               <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </button>
-            <span className="text-[10px] text-gray-300 select-none">v109</span>
+            <span className="text-[10px] text-gray-300 select-none">v111</span>
           </div>
 
         </div>
