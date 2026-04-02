@@ -596,53 +596,51 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
   // → iOSのタッチターゲット拡張でinputが×ボタン領域に侵食しないようにする
   const mobileDateArea = (
     <div className="flex items-center gap-0.5 text-xs">
-      {/* 開始日 */}
-      <div className="relative flex items-center">
-        <span className={`block min-w-[28px] px-0.5 text-center rounded ${
+      {/* 開始日: inputをテキストdivの中に閉じ込めてボタン領域に侵食させない */}
+      <div className="flex items-center">
+        <div className={`relative min-w-[28px] px-0.5 text-center rounded cursor-pointer ${
           node.startDate ? 'text-gray-600' : 'text-gray-400 border-b border-gray-300'
         } ${getDateBg(node.startDate, node.isCompleted) === 'overdue' ? 'bg-red-50' : getDateBg(node.startDate, node.isCompleted) === 'today' ? 'bg-yellow-50' : ''}`}>
           {node.startDate ? formatDateShort(node.startDate) : '開始'}
-        </span>
+          <input
+            ref={mobileStartDateRef}
+            type="date"
+            value={node.startDate}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            style={{ fontSize: '16px' }}
+          />
+        </div>
         <button
           ref={startClearBtnRef}
           type="button"
-          className={`relative ml-3 p-0.5 text-gray-300 hover:text-gray-500 text-xs leading-none ${node.startDate ? 'visible' : 'invisible'}`}
-          style={{ zIndex: 2 }}
+          className={`relative ml-1 p-0.5 text-gray-300 hover:text-gray-500 text-xs leading-none ${node.startDate ? 'visible' : 'invisible'}`}
           onClick={() => { if (node.startDate) dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: '' }); }}
         >×</button>
-        <input
-          ref={mobileStartDateRef}
-          type="date"
-          value={node.startDate}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: 'UPDATE_DATES', id, field: 'startDate', value: e.target.value })}
-          className="absolute inset-y-0 left-0 opacity-0 cursor-pointer"
-          style={{ right: node.startDate ? '24px' : '0', fontSize: '16px', zIndex: 1 }}
-        />
       </div>
       <span className="text-gray-300 flex-shrink-0">–</span>
       {/* 終了日 */}
-      <div className="relative flex items-center">
-        <span className={`block min-w-[28px] px-0.5 text-center rounded ${
+      <div className="flex items-center">
+        <div className={`relative min-w-[28px] px-0.5 text-center rounded cursor-pointer ${
           node.endDate ? 'text-gray-600' : 'text-gray-400 border-b border-gray-300'
         } ${getDateBg(node.endDate, node.isCompleted) === 'overdue' ? 'bg-red-50' : getDateBg(node.endDate, node.isCompleted) === 'today' ? 'bg-yellow-50' : ''}`}>
           {node.endDate ? formatDateShort(node.endDate) : '終了'}
-        </span>
+          <input
+            ref={mobileEndDateRef}
+            type="date"
+            value={node.endDate}
+            min={node.startDate}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            style={{ fontSize: '16px' }}
+          />
+        </div>
         <button
           ref={endClearBtnRef}
           type="button"
-          className={`relative ml-3 p-0.5 text-gray-300 hover:text-gray-500 text-xs leading-none ${node.endDate ? 'visible' : 'invisible'}`}
-          style={{ zIndex: 2 }}
+          className={`relative ml-1 p-0.5 text-gray-300 hover:text-gray-500 text-xs leading-none ${node.endDate ? 'visible' : 'invisible'}`}
           onClick={() => { if (node.endDate) dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: '' }); }}
         >×</button>
-        <input
-          ref={mobileEndDateRef}
-          type="date"
-          value={node.endDate}
-          min={node.startDate}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: 'UPDATE_DATES', id, field: 'endDate', value: e.target.value })}
-          className="absolute inset-y-0 left-0 opacity-0 cursor-pointer"
-          style={{ right: node.endDate ? '24px' : '0', fontSize: '16px', zIndex: 1 }}
-        />
       </div>
     </div>
   );
