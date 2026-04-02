@@ -803,17 +803,15 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
               <div className="flex-shrink-0 flex items-center gap-0.5 pt-1 pl-1">
                 {!node.isCompleted && mobileDateArea}
                 <button
-                  onClick={() => dispatch({ type: 'UNINDENT', id })}
-                  disabled={!canUnindent}
+                  onPointerDown={(e: React.PointerEvent) => { e.preventDefault(); if (canUnindent) dispatch({ type: 'UNINDENT', id }); }}
                   title="インデント減"
-                  className="flex-shrink-0 p-0.5 text-gray-300 hover:text-gray-600 rounded disabled:opacity-20 disabled:cursor-not-allowed">
+                  className={`flex-shrink-0 p-0.5 rounded ${canUnindent ? 'text-gray-400 active:text-gray-700' : 'text-gray-200 cursor-not-allowed'}`}>
                   <ChevronLeft size={14} />
                 </button>
                 <button
-                  onClick={() => dispatch({ type: 'INDENT', id })}
-                  disabled={!canIndent}
+                  onPointerDown={(e: React.PointerEvent) => { e.preventDefault(); if (canIndent) dispatch({ type: 'INDENT', id }); }}
                   title="インデント増"
-                  className="flex-shrink-0 p-0.5 text-gray-300 hover:text-gray-600 rounded disabled:opacity-20 disabled:cursor-not-allowed">
+                  className={`flex-shrink-0 p-0.5 rounded ${canIndent ? 'text-gray-400 active:text-gray-700' : 'text-gray-200 cursor-not-allowed'}`}>
                   <ChevronRight size={14} />
                 </button>
                 <button onClick={handleDeleteClick} title="削除"
@@ -1179,6 +1177,7 @@ function OutlinerApp({ user }: { user: User }) {
               className="p-1 sm:p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
               <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </button>
+            <span className="text-[10px] text-gray-300 select-none">v109</span>
           </div>
 
         </div>
