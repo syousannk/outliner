@@ -500,7 +500,8 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
     }
     else if (e.key === 'Delete') {
       const el = (e.target as HTMLInputElement | HTMLTextAreaElement);
-      if (el.selectionStart === node.text.length && el.selectionEnd === node.text.length) { e.preventDefault(); dispatch({ type: 'MERGE_WITH_NEXT', id }); }
+      if (el.selectionStart === 0 && el.selectionEnd === 0) { e.preventDefault(); dispatch({ type: 'MERGE_WITH_PREV', id }); }
+      else if (el.selectionStart === node.text.length && el.selectionEnd === node.text.length) { e.preventDefault(); dispatch({ type: 'MERGE_WITH_NEXT', id }); }
     }
     else if (e.key === 'ArrowUp' && e.altKey) { e.preventDefault(); dispatch({ type: 'REORDER_UP', id }); }
     else if (e.key === 'ArrowDown' && e.altKey) { e.preventDefault(); dispatch({ type: 'REORDER_DOWN', id }); }
@@ -1191,7 +1192,7 @@ function OutlinerApp({ user }: { user: User }) {
               className="p-1 sm:p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
               <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </button>
-            <span className="text-[10px] text-gray-300 select-none">v113</span>
+            <span className="text-[10px] text-gray-300 select-none">v114</span>
           </div>
 
         </div>
