@@ -61,6 +61,7 @@ type Action =
   | { type: 'TOGGLE_COLLAPSE'; id: string }
   | { type: 'ADD_NODE'; afterId?: string; isRoot?: boolean }
   | { type: 'ADD_NODE_BEFORE'; beforeId: string }
+  | { type: 'ADD_FIRST_CHILD'; parentId: string }
   | { type: 'SPLIT_NODE'; id: string; leftText: string; rightText: string }
   | { type: 'INDENT'; id: string } | { type: 'UNINDENT'; id: string }
   | { type: 'DELETE'; id: string; noFocus?: boolean } | { type: 'MOVE_UP'; id: string; cursorPos?: number } | { type: 'MOVE_DOWN'; id: string; cursorPos?: number }
@@ -101,6 +102,12 @@ function reducer(state: State, action: Action): State {
       const parentId = (nodes[beforeId] as OutlineNode).parent; newNode.parent = parentId; nodes[newNode.id] = newNode;
       const parent = clone(parentId); parent.children.splice(parent.children.indexOf(beforeId), 0, newNode.id);
       return { ...state, nodes, focusId: newNode.id, focusCursorPos: null, past: pushHistory(), future: [] };
+    }
+    case 'ADD_FIRST_CHILD': {
+      const { parentId } = action; const newNode = createNode();
+      newNode.parent = parentId; nodes[newNode.id] = newNode;
+      const parent = clone(parentId); parent.children.unshift(newNode.id); parent.isCollapsed = false;
+      return { ...state, nodes, focusId: newNode.id, focusCursorPos: 0, past: pushHistory(), future: [] };
     }
     case 'SPLIT_NODE': {
       const { id, leftText, rightText } = action;
@@ -476,9 +483,14 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
     else if (e.key === 'Enter') {
       e.preventDefault();
       const pos = (e.target as HTMLInputElement | HTMLTextAreaElement).selectionStart ?? 0;
+      const atEnd = pos >= node.text.length;
       if (pos === 0 && node.text.length > 0) { dispatch({ type: 'ADD_NODE_BEFORE', beforeId: id }); }
       else if (pos > 0 && pos < node.text.length) {
         dispatch({ type: 'SPLIT_NODE', id, leftText: node.text.slice(0, pos), rightText: node.text.slice(pos) });
+      }
+      else if (atEnd && hasChildren && isExpanded) {
+        // 子タスクがある場合は一番上に新しい子タスクを作成
+        dispatch({ type: 'ADD_FIRST_CHILD', parentId: id });
       }
       else { dispatch({ type: 'ADD_NODE', afterId: id }); }
     }
@@ -1179,7 +1191,7 @@ function OutlinerApp({ user }: { user: User }) {
               className="p-1 sm:p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
               <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </button>
-            <span className="text-[10px] text-gray-300 select-none">v112</span>
+            <span className="text-[10px] text-gray-300 select-none">v113</span>
           </div>
 
         </div>
