@@ -420,9 +420,16 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
     }
   }, [node.isCompleted]);
 
-  // スマホtextareaの高さ自動調整
+  // textareaの高さ自動調整（スマホ・デスクトップ共通）
   useEffect(() => {
     const el = mobileInputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }, [node.text]);
+
+  useEffect(() => {
+    const el = desktopInputRef.current;
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = el.scrollHeight + 'px';
@@ -735,43 +742,35 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
 
           {/* PC レイアウト: flex-row でリーダー線・日付・ゴミ箱を横並び */}
           <div
-            className="hidden sm:flex sm:flex-row sm:items-center"
+            className="hidden sm:flex sm:flex-row sm:items-start gap-2"
             onMouseEnter={() => setSelfHovered(true)}
             onMouseLeave={() => setSelfHovered(false)}
           >
-            {/* テキスト（幅可変・inline-block サイズ計算） */}
-            <div className={`relative flex-shrink overflow-hidden min-w-[20px] transition-opacity duration-500 ${node.isCompleted ? 'opacity-40' : ''}`}>
-              {/* 幅計算用スペーサー：PY_CLASS + テキストクラスでバレットと高さを揃える */}
-              <span className={`invisible whitespace-pre block px-1 ${PY_CLASS} ${TEXT_CLASS} ${LEADING_CLASS} pointer-events-none`}>
-                {node.text || 'タスクを入力'}
-              </span>
-              <input
-                ref={desktopInputRef}
-                value={node.text}
-                onChange={e => dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value })}
-                onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
-                onKeyDown={handleKeyDown}
-                placeholder="タスクを入力"
-                className={`absolute inset-0 w-full h-full bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS}
-                  ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
-                  transition-colors duration-1000 ${node.isCompleted ? 'text-gray-400' : 'text-gray-900'}`}
-              />
-              {/* 取り消し線のみ */}
-              {strikeState && (
-                <div className="pointer-events-none absolute inset-0 flex items-center px-1" aria-hidden>
-                  <span className={`relative whitespace-pre ${TEXT_CLASS} ${LEADING_CLASS}`} style={{ color: 'transparent' }}>
-                    {node.text || '\u00A0'}
-                    {strikeLine}
-                  </span>
-                </div>
-              )}
-            </div>
+            {/* テキスト（複数行対応・幅可変） */}
+            <textarea
+              ref={desktopInputRef}
+              rows={1}
+              value={node.text}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                e.target.style.height = 'auto';
+                e.target.style.height = e.target.scrollHeight + 'px';
+                dispatch({ type: 'UPDATE_TEXT', id, text: e.target.value });
+              }}
+              onFocus={() => { if (focusId !== id) dispatch({ type: 'SET_FOCUS', id }); }}
+              onKeyDown={handleKeyDown}
+              placeholder="タスクを入力"
+              style={{ resize: 'none', overflow: 'hidden' }}
+              className={`flex-1 min-w-0 bg-transparent outline-none px-1 ${TEXT_CLASS} ${LEADING_CLASS} ${PY_CLASS}
+                ${isHighlighted ? 'bg-yellow-200/50 rounded' : ''}
+                ${strikeState === 'in' || strikeState === 'done' ? 'strike-text-done' : strikeState === 'out' ? 'strike-text-out' : ''}
+                transition-[color,opacity] duration-500 ${node.isCompleted ? 'text-gray-400 opacity-40' : 'text-gray-900'}`}
+            />
 
             {/* リーダー線: 日付あり or ホバー/フォーカス時のみ表示 */}
             {(hasDates || isFocused || selfHovered) ? (
-              <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mx-2 min-w-[12px]" />
+              <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mt-2 min-w-[12px] flex-shrink-0" />
             ) : (
-              <div className="flex-1 mx-2 min-w-[12px]" />
+              <div className="flex-1 mt-2 min-w-[12px] flex-shrink-0" />
             )}
 
             {/* 日付エリア：固定幅で全階層の右端を揃える */}
