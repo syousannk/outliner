@@ -388,7 +388,7 @@ interface TreeItemProps {
 const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, matched, isFiltering, searchQuery, onDeleteRequest, draggingId, dragOverId, onDragStart, onDragOver, onDragEnd, onDrop }: TreeItemProps) => {
   const node = nodes[id] as OutlineNode;
   const mobileInputRef = useRef<HTMLTextAreaElement>(null);
-  const desktopInputRef = useRef<HTMLInputElement>(null);
+  const desktopInputRef = useRef<HTMLTextAreaElement>(null);
   const startDateRef = useRef<HTMLInputElement>(null);
   const endDateRef = useRef<HTMLInputElement>(null);
   const mobileStartDateRef = useRef<HTMLInputElement>(null);
