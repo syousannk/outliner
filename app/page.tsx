@@ -768,9 +768,9 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
 
             {/* リーダー線: 日付あり or ホバー/フォーカス時のみ表示 */}
             {(hasDates || isFocused || selfHovered) ? (
-              <div className="flex-1 border-t-[0.5px] border-solid border-gray-200 mt-2 min-w-[12px] flex-shrink-0" />
+              <div className="border-t-[0.5px] border-solid border-gray-200 mt-2 min-w-[12px] flex-shrink-0" />
             ) : (
-              <div className="flex-1 mt-2 min-w-[12px] flex-shrink-0" />
+              <div className="mt-2 min-w-[12px] flex-shrink-0" />
             )}
 
             {/* 日付エリア：固定幅で全階層の右端を揃える */}
