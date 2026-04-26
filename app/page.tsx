@@ -742,7 +742,7 @@ const TreeItem = React.memo(({ id, nodes, dispatch, focusId, focusCursorPos, mat
 
           {/* PC レイアウト: flex-row でリーダー線・日付・ゴミ箱を横並び */}
           <div
-            className="hidden sm:flex sm:flex-row sm:items-start gap-2"
+            className="hidden sm:flex sm:flex-row sm:items-start"
             onMouseEnter={() => setSelfHovered(true)}
             onMouseLeave={() => setSelfHovered(false)}
           >
